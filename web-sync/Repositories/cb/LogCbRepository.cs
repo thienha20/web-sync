@@ -7,7 +7,7 @@ namespace web_sync.Repositories.cb
 {
     public interface ILogCbRepository
     {
-        Task<IEnumerable<LogCbModel>?> GetAll(LogDto param);
+        Task<IEnumerable<LogCbModel?>?> GetAll(LogDto param);
         Task<LogCbModel?> GetById(long id);
         void Insert(LogCbModel Log);
         void ReplaceInto(LogCbModel Log);
@@ -25,7 +25,7 @@ namespace web_sync.Repositories.cb
             _connection = connection;
         }
 
-        public async Task<IEnumerable<LogCbModel>?> GetAll(LogDto param)
+        public async Task<IEnumerable<LogCbModel?>?> GetAll(LogDto param)
         {
             string fields = "*";
             string where = " WHERE true ";
@@ -132,7 +132,6 @@ namespace web_sync.Repositories.cb
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.Message);
                 return null;
             }
             
@@ -142,7 +141,7 @@ namespace web_sync.Repositories.cb
         {
             if (id > 0)
             {
-                string sql = "SELECT * FROM " + table + " WHERE country_id = @Id";
+                string sql = "SELECT * FROM " + table + " WHERE log_id = @Id";
                 var res = await _connection.QueryFirstOrDefaultAsync<dynamic>(sql, new { Id = id });
                 if (res == null)
                 {
@@ -297,10 +296,7 @@ namespace web_sync.Repositories.cb
         {
             string query = "UPDATE " + table + " SET ";
             List<string> dataSet = new List<string>();
-            if(Log.LogId != null)
-            {
-                dataSet.Add("log_id = @LogId");
-            }
+            Log.LogId = id;
             if (Log.ObjectName != null)
             {
                 dataSet.Add("object_name = @ObjectName");

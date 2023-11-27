@@ -7,12 +7,13 @@ namespace web_sync.Repositories.ob
 {
     public interface IPostObRepository
     {
-        IEnumerable<PostObModel> GetAll(PostDto param);
+        Task<IEnumerable<PostObModel?>?> GetAll(PostDto param);
+        Task<PostObModel?> GetById(long id);
         void Insert(PostObModel post);
         void ReplaceInto(PostObModel post);
         void BulkInsert(List<PostObModel> post);
-        void Update(int id, PostObModel post);
-        void Delete(int id);
+        void Update(long id, PostObModel post);
+        void Delete(long id);
     }
 
     public class PostObRepository : IPostObRepository
@@ -25,24 +26,24 @@ namespace web_sync.Repositories.ob
             _connection = connection;
         }
 
-        public IEnumerable<PostObModel> GetAll(PostDto param)
+        public async Task<IEnumerable<PostObModel?>?> GetAll(PostDto param)
         {
             string fields = "*";
             string where = " WHERE true ";
             string limit = "";
             string sort = "";
 
-            if(param.UserId != null)
+            if (param.UserId != null)
             {
                 where += " AND user_id = @UserId";
             }
 
-            if(param.CategoryId != null)
+            if (param.CategoryId != null)
             {
                 where += " AND category_id = @CategoryId";
             }
 
-            if(param.CreatedDateTo != null)
+            if (param.CreatedDateTo != null)
             {
                 where += " AND created_at <= @CreatedDateTo";
             }
@@ -52,23 +53,21 @@ namespace web_sync.Repositories.ob
                 where += " AND created_at >= @CreatedDateFrom";
             }
 
-            if (param.Limit != null)
+            if (param.Offset != null)
             {
-                if(param.Offset != null)
-                {
-                    limit += " limit " + param.Offset.ToString() + ", " + param.Limit.ToString();
-                }
-                else
-                {
-                    limit += " limit " + param.Limit.ToString();
-                }     
+                limit += " OFFSET " + param.Offset.ToString();
             }
 
-            if(param.SortBy != null)
+            if (param.Limit != null)
             {
-                string sortOrder = param.SortOrder != "asc" ? " desc": " asc" ;
-                string[] sortBy = { "post_id", "name", "user_id", "created_at"  };
-                sort += " ORDER BY " + (sortBy.Contains(param.SortBy) ? param.SortBy: sortBy[0]) + sortOrder;
+                limit += " LIMIT " + param.Limit.ToString();
+            }
+
+            if (param.SortBy != null)
+            {
+                string sortOrder = param.SortOrder != "asc" ? " desc" : " asc";
+                string[] sortBy = { "post_id", "name", "user_id", "created_at" };
+                sort += " ORDER BY " + (sortBy.Contains(param.SortBy) ? param.SortBy : sortBy[0]) + sortOrder;
             }
 
             if (param.Fields != null)
@@ -91,7 +90,47 @@ namespace web_sync.Repositories.ob
             string sql = "SELECT " + fields + " FROM " + table;
             sql += where + sort + limit;
 
-            return _connection.Query<PostObModel>(sql, param);
+            var res = await _connection.QueryAsync<dynamic>(sql, param);
+            if (res == null)
+            {
+                return null;
+            }
+            var data = res.Select(p => new PostObModel
+            {
+                PostId = p.post_id ?? null,
+                Name = p.name ?? null,
+                Description = p.description ?? null,
+                UserId = p.user_id ?? null,
+                CategoryId = p.category_id ?? null,
+                CreatedAt = p.created_at ?? null,
+                UpdatedAt = p.updated_at ?? null
+            });
+            return data;
+        }
+
+        public async Task<PostObModel?> GetById(long id)
+        {
+            if (id > 0)
+            {
+                string sql = "SELECT * FROM " + table + " WHERE post_id = @Id";
+                var res = await _connection.QueryFirstOrDefaultAsync<dynamic>(sql, new { Id = id });
+                if (res == null)
+                {
+                    return null;
+                }
+                var data = new PostObModel()
+                {
+                    PostId = res.post_id ?? null,
+                    Name = res.name ?? null,
+                    Description = res.description ?? null,
+                    UserId = res.user_id ?? null,
+                    CategoryId = res.category_id ?? null,
+                    CreatedAt = res.created_at ?? null,
+                    UpdatedAt = res.updated_at ?? null
+                };
+                return data;
+            }
+            return null;
         }
 
         public void Insert(PostObModel post)
@@ -170,12 +209,12 @@ namespace web_sync.Repositories.ob
                 {
                     column.Add("updated_at");
                 }
-                using (var writer = _connection.BeginBinaryImport("COPY " + table + " (" + string.Join(", ", column)+ ") FROM STDIN (FORMAT BINARY)"))
+                using (var writer = _connection.BeginBinaryImport("COPY " + table + " (" + string.Join(", ", column) + ") FROM STDIN (FORMAT BINARY)"))
                 {
                     foreach (var item in posts)
                     {
                         writer.StartRow();
-                        if (item.PostId  != null)
+                        if (item.PostId != null)
                         {
                             writer.Write(item.PostId, NpgsqlTypes.NpgsqlDbType.Integer);
                         }
@@ -213,7 +252,7 @@ namespace web_sync.Repositories.ob
 
         public void ReplaceInto(PostObModel Post)
         {
-            string query = "INSERT INTO " + table;
+            string query = "INSERT INTO " + table + "(";
             List<string> column = new List<string>();
             List<string> dataSet = new List<string>();
             List<string> dataUpdate = new List<string>();
@@ -259,18 +298,15 @@ namespace web_sync.Repositories.ob
                 dataUpdate.Add("updated_at = @UpdatedAt");
             }
 
-            query += string.Join(", ", column) + " VALUES (" + string.Join(", ", dataSet) + ") ON CONFLICT (post_id) DO UPDATE SET " + string.Join(", ", dataUpdate);
+            query += string.Join(", ", column) + ") VALUES (" + string.Join(", ", dataSet) + ") ON CONFLICT (post_id) DO UPDATE SET " + string.Join(", ", dataUpdate);
             _connection.Execute(query, Post);
         }
 
-        public void Update(int id, PostObModel post)
+        public void Update(long id, PostObModel post)
         {
             string query = "UPDATE " + table + " SET ";
             List<string> dataSet = new List<string>();
-            if (post.PostId != null)
-            {
-                dataSet.Add("post_id = @PostId");
-            }
+            post.PostId = id;
             if (post.Name != null)
             {
                 dataSet.Add("name = @Name");
@@ -299,10 +335,14 @@ namespace web_sync.Repositories.ob
             _connection.Execute(query, post);
         }
 
-        public void Delete(int id)
+        public void Delete(long id)
         {
-            string query = "DELETE FROM " + table + " WHERE post_id = @PostId";
-            _connection.Execute(query, new { PostId = id } );
+            if (id > 0)
+            {
+                string query = "DELETE FROM " + table + " WHERE post_id = @PostId";
+                _connection.Execute(query, new { PostId = id });
+            }
+
         }
     }
 }

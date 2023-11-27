@@ -7,7 +7,7 @@ namespace web_sync.Repositories.cb
 {
     public interface IRegionCbRepository
     {
-        Task<IEnumerable<RegionCbModel>?> GetAll(RegionDto param);
+        Task<IEnumerable<RegionCbModel?>> GetAll(RegionDto param);
         Task<RegionCbModel?> GetById(long id);
         void Insert(RegionCbModel Region);
         void ReplaceInto(RegionCbModel Region);
@@ -26,7 +26,7 @@ namespace web_sync.Repositories.cb
             _connection = connection;
         }
 
-        public async Task<IEnumerable<RegionCbModel>?> GetAll(RegionDto param)
+        public async Task<IEnumerable<RegionCbModel?>> GetAll(RegionDto param)
         {
             string fields = "*";
             string where = " WHERE true ";
@@ -198,14 +198,11 @@ namespace web_sync.Repositories.cb
         {
             string query = "UPDATE " + table + " SET ";
             List<string> dataSet = new List<string>();
-            if(Region.RegionName != null)
+            Region.RegionId = id;
+
+            if (Region.RegionName != null)
             {
                 dataSet.Add("region_name = @RegionName");
-            }
-            
-            if (Region.RegionId != null)
-            {
-                dataSet.Add("region_id = @RegionId");
             }
             
             query += string.Join(", ", dataSet) + " WHERE region_id = @RegionId";
@@ -214,8 +211,13 @@ namespace web_sync.Repositories.cb
 
         public void Delete(long id)
         {
-            string query = "DELETE FROM " + table + " WHERE region_id = @RegionId";
-            _connection.Execute(query, new { RegionId = id } );
+            if (id > 0)
+            {
+                string query = "DELETE FROM " + table + " WHERE region_id = @RegionId";
+                _connection.Execute(query, new { RegionId = id });
+
+            }
+            
         }
     }
 }

@@ -7,12 +7,13 @@ namespace web_sync.Repositories.ob
 {
     public interface IUserObRepository
     {
-        IEnumerable<UserObModel> GetAll(UserDto param);
+        Task<IEnumerable<UserObModel?>?> GetAll(UserDto param);
+        Task<UserObModel?> GetById(long id);
         void Insert(UserObModel User);
         void ReplaceInto(UserObModel User);
         void BulkInsert(List<UserObModel> User);
-        void Update(int id, UserObModel User);
-        void Delete(int id);
+        void Update(long id, UserObModel User);
+        void Delete(long id);
     }
 
     public class UserObRepository : IUserObRepository
@@ -24,14 +25,14 @@ namespace web_sync.Repositories.ob
             _connection = connection;
         }
 
-        public IEnumerable<UserObModel> GetAll(UserDto param)
+        public async Task<IEnumerable<UserObModel?>?> GetAll(UserDto param)
         {
             string fields = "*";
             string where = " WHERE true ";
             string limit = "";
             string sort = "";
 
-            if(param.UserId != null)
+            if (param.UserId != null)
             {
                 where += " AND user_id = @UserId";
             }
@@ -47,7 +48,7 @@ namespace web_sync.Repositories.ob
                 where += " AND country_id = @CountryId";
             }
 
-            if(param.CreatedDateTo != null)
+            if (param.CreatedDateTo != null)
             {
                 where += " AND created_at <= @CreatedDateTo";
             }
@@ -57,23 +58,21 @@ namespace web_sync.Repositories.ob
                 where += " AND created_at >= @CreatedDateFrom";
             }
 
-            if (param.Limit != null)
+            if (param.Offset != null)
             {
-                if(param.Offset != null)
-                {
-                    limit += " limit " + param.Offset.ToString() + ", " + param.Limit.ToString();
-                }
-                else
-                {
-                    limit += " limit " + param.Limit.ToString();
-                }     
+                limit += " OFFSET " + param.Offset.ToString();
             }
 
-            if(param.SortBy != null)
+            if (param.Limit != null)
             {
-                string sortOrder = param.SortOrder != "asc" ? " desc": " asc" ;
+                limit += " LIMIT " + param.Limit.ToString();
+            }
+
+            if (param.SortBy != null)
+            {
+                string sortOrder = param.SortOrder != "asc" ? " desc" : " asc";
                 string[] sortBy = { "user_id", "created_at", "country_id", "email", "full_name", "username" };
-                sort += " ORDER BY " + (sortBy.Contains(param.SortBy) ? param.SortBy: sortBy[0]) + sortOrder;
+                sort += " ORDER BY " + (sortBy.Contains(param.SortBy) ? param.SortBy : sortBy[0]) + sortOrder;
             }
 
             if (param.Fields != null)
@@ -96,7 +95,47 @@ namespace web_sync.Repositories.ob
             string sql = "SELECT " + fields + " FROM " + table;
             sql += where + sort + limit;
 
-            return _connection.Query<UserObModel>(sql, param);
+            var res = await _connection.QueryAsync<dynamic>(sql, param);
+            if (res == null)
+            {
+                return null;
+            }
+            var data = res.Select(p => new UserObModel
+            {
+                UserId = p.user_id ?? null,
+                UserName = p.user_name ?? null,
+                FullName = p.full_name ?? null,
+                Email = p.email ?? null,
+                CountryId = p.country_id ?? null,
+                CreatedAt = p.created_at ?? null,
+                UpdatedAt = p.updated_at ?? null,
+            });
+            return data;
+        }
+
+        public async Task<UserObModel?> GetById(long id)
+        {
+            if (id > 0)
+            {
+                string sql = "SELECT * FROM " + table + " WHERE user_id = @Id";
+                var res = await _connection.QueryFirstOrDefaultAsync<dynamic>(sql, new { Id = id });
+                if (res == null)
+                {
+                    return null;
+                }
+                var data = new UserObModel()
+                {
+                    UserId = res.user_id ?? null,
+                    UserName = res.user_name ?? null,
+                    FullName = res.full_name ?? null,
+                    Email = res.email ?? null,
+                    CountryId = res.country_id ?? null,
+                    CreatedAt = res.created_at ?? null,
+                    UpdatedAt = res.updated_at ?? null,
+                };
+                return data;
+            }
+            return null;
         }
 
         public void Insert(UserObModel User)
@@ -175,12 +214,12 @@ namespace web_sync.Repositories.ob
                 {
                     column.Add("updated_at");
                 }
-                using (var writer = _connection.BeginBinaryImport("COPY " + table + " (" + string.Join(", ", column)+ ") FROM STDIN (FORMAT BINARY)"))
+                using (var writer = _connection.BeginBinaryImport("COPY " + table + " (" + string.Join(", ", column) + ") FROM STDIN (FORMAT BINARY)"))
                 {
                     foreach (var item in Users)
                     {
                         writer.StartRow();
-                        if(item.FullName != null)
+                        if (item.FullName != null)
                         {
                             writer.Write(item.FullName, NpgsqlTypes.NpgsqlDbType.Text);
                         }
@@ -220,7 +259,7 @@ namespace web_sync.Repositories.ob
 
         public void ReplaceInto(UserObModel User)
         {
-            string query = "INSERT INTO " + table;
+            string query = "INSERT INTO " + table + "(";
             List<string> column = new List<string>();
             List<string> dataSet = new List<string>();
             List<string> dataUpdate = new List<string>();
@@ -266,15 +305,16 @@ namespace web_sync.Repositories.ob
                 dataUpdate.Add("updated_at = @UpdatedAt");
             }
 
-            query += string.Join(", ", column) + " VALUES (" + string.Join(", ", dataSet) + ") ON CONFLICT (user_id) DO UPDATE SET " + string.Join(", ", dataUpdate);
+            query += string.Join(", ", column) + ") VALUES (" + string.Join(", ", dataSet) + ") ON CONFLICT (user_id) DO UPDATE SET " + string.Join(", ", dataUpdate);
             _connection.Execute(query, User);
         }
 
-        public void Update(int id, UserObModel User)
+        public void Update(long id, UserObModel User)
         {
             string query = "UPDATE " + table + " SET ";
             List<string> dataSet = new List<string>();
-            if(User.FullName != null)
+            User.UserId = id;
+            if (User.FullName != null)
             {
                 dataSet.Add("full_name = @FullName");
             }
@@ -290,10 +330,7 @@ namespace web_sync.Repositories.ob
             {
                 dataSet.Add("country_id = @CountryId");
             }
-            if (User.UserId != null)
-            {
-                dataSet.Add("user_id = @UserId");
-            }
+
             if (User.CreatedAt != null)
             {
                 dataSet.Add("created_at = @CreatedAt");
@@ -304,14 +341,16 @@ namespace web_sync.Repositories.ob
             }
             query += string.Join(", ", dataSet) + " WHERE user_id = @UserId";
             _connection.Execute(query, User);
-            // Thực hiện logic để cập nhật entity trong cơ sở dữ liệu
         }
 
-        public void Delete(int id)
+        public void Delete(long id)
         {
-            // Thực hiện logic để xóa entity từ cơ sở dữ liệu
-            string query = "DELETE FROM " + table + " WHERE user_id = @UserId";
-            _connection.Execute(query, new { UserId = id } );
+            if (id > 0)
+            {
+                string query = "DELETE FROM " + table + " WHERE user_id = @UserId";
+                _connection.Execute(query, new { UserId = id });
+            }
+
         }
     }
 }

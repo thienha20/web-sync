@@ -50,12 +50,12 @@ namespace web_sync.Services
                         {
                             _countryObRepository.ReplaceInto(new CountryObModel()
                             {
-                                CountryId = item.CountryId,
-                                CountryName = item.CountryName,
-                                CountryCode = item.CountryCode,
-                                RegionId = item.RegionId,
+                                CountryId = item?.CountryId,
+                                CountryName = item?.CountryName,
+                                CountryCode = item?.CountryCode,
+                                RegionId = item?.RegionId,
                             });
-                            await _fileLogService.writeFile("country-insert", item.CountryId.ToString() ?? "");
+                            await _fileLogService.writeFile("country-insert", item?.CountryId?.ToString() ?? "");
                         } catch (Exception ex)
                         {
                             // không add dc khi thiếu khóa ngoại thì add khóa
@@ -64,12 +64,12 @@ namespace web_sync.Services
                                 await _regionService.syncInsertWithCondition(new InsertDto() { id = new long[] { item.RegionId ?? 0 } });
                                 _countryObRepository.ReplaceInto(new CountryObModel()
                                 {
-                                    CountryId = item.CountryId,
-                                    CountryName = item.CountryName,
-                                    CountryCode = item.CountryCode,
-                                    RegionId = item.RegionId,
+                                    CountryId = item?.CountryId,
+                                    CountryName = item?.CountryName,
+                                    CountryCode = item?.CountryCode,
+                                    RegionId = item?.RegionId,
                                 });
-                                await _fileLogService.writeFile("country-insert", item.CountryId.ToString() ?? "");
+                                await _fileLogService.writeFile("country-insert", item?.CountryId?.ToString() ?? "");
                                 continue;
                             }
                         }
@@ -99,10 +99,10 @@ namespace web_sync.Services
                         {
                             _countryObRepository.ReplaceInto(new CountryObModel()
                             {
-                                CountryId = item.CountryId,
-                                CountryName = item.CountryName,
-                                CountryCode = item.CountryCode,
-                                RegionId = item.RegionId,
+                                CountryId = item?.CountryId,
+                                CountryName = item?.CountryName,
+                                CountryCode = item?.CountryCode,
+                                RegionId = item?.RegionId,
                             });
                         }
                         catch (Exception ex)
@@ -110,13 +110,13 @@ namespace web_sync.Services
                             // không add dc khi thiếu khóa ngoại thì add khóa
                             if (ex.Message.Contains("region_id_fk"))
                             {
-                                await _regionService.syncInsertWithCondition(new InsertDto() { id = new long[] { item.RegionId ?? 0 } });
+                                await _regionService.syncInsertWithCondition(new InsertDto() { id = new long[] { item?.RegionId ?? 0 } });
                                 _countryObRepository.ReplaceInto(new CountryObModel()
                                 {
-                                    CountryId = item.CountryId,
-                                    CountryName = item.CountryName,
-                                    CountryCode = item.CountryCode,
-                                    RegionId = item.RegionId,
+                                    CountryId = item?.CountryId,
+                                    CountryName = item?.CountryName,
+                                    CountryCode = item?.CountryCode,
+                                    RegionId = item?.RegionId,
                                 });
                                 continue;
                             }
@@ -137,7 +137,7 @@ namespace web_sync.Services
         {
             try
             {
-                int limit = 1000, fromLogId;
+                int limit = 1000;
                 string content = await _fileLogService.readFile("country-query-log");
                 var param = new LogDto() {
                     ObjectName = "country",
@@ -147,7 +147,7 @@ namespace web_sync.Services
                 };
                 if (content != null && content != "")
                 {
-                    bool isValidInt = int.TryParse(content, out fromLogId);
+                    bool isValidInt = int.TryParse(content, out int fromLogId);
                     if (isValidInt)
                     {
                         param.FromLogId = fromLogId;
@@ -158,9 +158,9 @@ namespace web_sync.Services
                 {
                     foreach (var item in result)
                     {
-                        if(item.ObjectType == "update")
+                        if(item?.ObjectType == "update")
                         {
-                            var countryData = await _countryCbRepository.GetById(item.ObjectId ?? 0);
+                            var countryData = await _countryCbRepository.GetById(item?.ObjectId ?? 0);
                             if(countryData != null)
                             {
                                 _countryObRepository.ReplaceInto(new CountryObModel()
@@ -175,9 +175,9 @@ namespace web_sync.Services
                             
                         } else
                         {
-                            _countryObRepository.Delete(item.ObjectId ?? 0);
+                            _countryObRepository.Delete(item?.ObjectId ?? 0);
                         }
-                        await _fileLogService.writeFile("country-query-log", item.LogId.ToString() ?? "");
+                        await _fileLogService.writeFile("country-query-log", item?.LogId?.ToString() ?? "");
                     }
                     param.Offset += limit;
                     result = await _logCbRepository.GetAll(param);
@@ -191,8 +191,11 @@ namespace web_sync.Services
         }
         public async Task<bool> syncAll()
         {
-            bool bol = false;
-            bol = await syncInsert();
+            bool bol = await syncInsert();
+            if (!bol)
+            {
+                return false;
+            }
             bol = await syncUpdateOrDelete();
             return bol;
         }

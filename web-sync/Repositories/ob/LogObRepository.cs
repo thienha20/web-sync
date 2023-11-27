@@ -7,7 +7,7 @@ namespace web_sync.Repositories.ob
 {
     public interface ILogObRepository
     {
-        Task<IEnumerable<LogObModel>?> GetAll(LogDto param);
+        Task<IEnumerable<LogObModel?>?> GetAll(LogDto param);
         Task<LogObModel?> GetById(long id);
         void Insert(LogObModel Log);
         void ReplaceInto(LogObModel Log);
@@ -25,7 +25,7 @@ namespace web_sync.Repositories.ob
             _connection = connection;
         }
 
-        public async Task<IEnumerable<LogObModel>?> GetAll(LogDto param)
+        public async Task<IEnumerable<LogObModel?>?> GetAll(LogDto param)
         {
             string fields = "*";
             string where = " WHERE true ";
@@ -132,7 +132,6 @@ namespace web_sync.Repositories.ob
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.Message);
                 return null;
             }
 
@@ -142,7 +141,7 @@ namespace web_sync.Repositories.ob
         {
             if (id > 0)
             {
-                string sql = "SELECT * FROM " + table + " WHERE country_id = @Id";
+                string sql = "SELECT * FROM " + table + " WHERE log_id = @Id";
                 var res = await _connection.QueryFirstOrDefaultAsync<dynamic>(sql, new { Id = id });
                 if (res == null)
                 {
@@ -297,10 +296,7 @@ namespace web_sync.Repositories.ob
         {
             string query = "UPDATE " + table + " SET ";
             List<string> dataSet = new List<string>();
-            if (Log.LogId != null)
-            {
-                dataSet.Add("log_id = @LogId");
-            }
+            Log.LogId = id;
             if (Log.ObjectName != null)
             {
                 dataSet.Add("object_name = @ObjectName");

@@ -7,12 +7,13 @@ namespace web_sync.Repositories.cb
 {
     public interface IPostCbRepository
     {
-        IEnumerable<PostCbModel> GetAll(PostDto param);
+        Task<IEnumerable<PostCbModel?>?> GetAll(PostDto param);
+        Task<PostCbModel?> GetById(long id);
         void Insert(PostCbModel post);
         void ReplaceInto(PostCbModel post);
         void BulkInsert(List<PostCbModel> post);
-        void Update(int id, PostCbModel post);
-        void Delete(int id);
+        void Update(long id, PostCbModel post);
+        void Delete(long id);
     }
 
     public class PostCbRepository : IPostCbRepository
@@ -25,7 +26,7 @@ namespace web_sync.Repositories.cb
             _connection = connection;
         }
 
-        public IEnumerable<PostCbModel> GetAll(PostDto param)
+        public async Task<IEnumerable<PostCbModel?>?> GetAll(PostDto param)
         {
             string fields = "*";
             string where = " WHERE true ";
@@ -52,19 +53,17 @@ namespace web_sync.Repositories.cb
                 where += " AND created_at >= @CreatedDateFrom";
             }
 
-            if (param.Limit != null)
+            if (param.Offset != null)
             {
-                if(param.Offset != null)
-                {
-                    limit += " limit " + param.Offset.ToString() + ", " + param.Limit.ToString();
-                }
-                else
-                {
-                    limit += " limit " + param.Limit.ToString();
-                }     
+                limit += " OFFSET " + param.Offset.ToString();
             }
 
-            if(param.SortBy != null)
+            if (param.Limit != null)
+            {
+                limit += " LIMIT " + param.Limit.ToString();
+            }
+
+            if (param.SortBy != null)
             {
                 string sortOrder = param.SortOrder != "asc" ? " desc": " asc" ;
                 string[] sortBy = { "post_id", "name", "user_id", "created_at"  };
@@ -91,7 +90,47 @@ namespace web_sync.Repositories.cb
             string sql = "SELECT " + fields + " FROM " + table;
             sql += where + sort + limit;
 
-            return _connection.Query<PostCbModel>(sql, param);
+            var res = await _connection.QueryAsync<dynamic>(sql, param);
+            if (res == null)
+            {
+                return null;
+            }
+            var data = res.Select(p => new PostCbModel
+            {
+                PostId = p.post_id ?? null,
+                Name = p.name ?? null,
+                Description = p.description ?? null,
+                UserId = p.user_id ?? null,
+                CategoryId = p.category_id ?? null,
+                CreatedAt = p.created_at ?? null,
+                UpdatedAt = p.updated_at ?? null
+            });
+            return data;
+        }
+
+        public async Task<PostCbModel?> GetById(long id)
+        {
+            if (id > 0)
+            {
+                string sql = "SELECT * FROM " + table + " WHERE post_id = @Id";
+                var res = await _connection.QueryFirstOrDefaultAsync<dynamic>(sql, new { Id = id });
+                if (res == null)
+                {
+                    return null;
+                }
+                var data = new PostCbModel()
+                {
+                    PostId = res.post_id ?? null,
+                    Name = res.name ?? null,
+                    Description = res.description ?? null,
+                    UserId = res.user_id ?? null,
+                    CategoryId = res.category_id ?? null,
+                    CreatedAt = res.created_at ?? null,
+                    UpdatedAt = res.updated_at ?? null
+                };
+                return data;
+            }
+            return null;
         }
 
         public void Insert(PostCbModel post)
@@ -213,7 +252,7 @@ namespace web_sync.Repositories.cb
 
         public void ReplaceInto(PostCbModel Post)
         {
-            string query = "INSERT INTO " + table;
+            string query = "INSERT INTO " + table + "(";
             List<string> column = new List<string>();
             List<string> dataSet = new List<string>();
             List<string> dataUpdate = new List<string>();
@@ -259,18 +298,15 @@ namespace web_sync.Repositories.cb
                 dataUpdate.Add("updated_at = @UpdatedAt");
             }
 
-            query += string.Join(", ", column) + " VALUES (" + string.Join(", ", dataSet) + ") ON CONFLICT (post_id) DO UPDATE SET " + string.Join(", ", dataUpdate);
+            query += string.Join(", ", column) + ") VALUES (" + string.Join(", ", dataSet) + ") ON CONFLICT (post_id) DO UPDATE SET " + string.Join(", ", dataUpdate);
             _connection.Execute(query, Post);
         }
 
-        public void Update(int id, PostCbModel post)
+        public void Update(long id, PostCbModel post)
         {
             string query = "UPDATE " + table + " SET ";
             List<string> dataSet = new List<string>();
-            if (post.PostId != null)
-            {
-                dataSet.Add("post_id = @PostId");
-            }
+            post.PostId = id;
             if (post.Name != null)
             {
                 dataSet.Add("name = @Name");
@@ -299,10 +335,14 @@ namespace web_sync.Repositories.cb
             _connection.Execute(query, post);
         }
 
-        public void Delete(int id)
+        public void Delete(long id)
         {
-            string query = "DELETE FROM " + table + " WHERE post_id = @PostId";
-            _connection.Execute(query, new { PostId = id } );
+            if (id > 0)
+            {
+                string query = "DELETE FROM " + table + " WHERE post_id = @PostId";
+                _connection.Execute(query, new { PostId = id });
+            }
+           
         }
     }
 }

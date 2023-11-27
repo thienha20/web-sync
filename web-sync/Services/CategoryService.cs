@@ -27,12 +27,12 @@ namespace web_sync.Services
         {
             try
             {
-                int limit = 1000, fromCategoryId;
+                int limit = 1000;
                 var param = new CategoryDto() { Limit = limit, Offset = 0 };
                 string content = await _fileLogService.readFile("category-insert");
                 if(content != null && content != "")
                 {
-                    bool isValidInt = int.TryParse(content, out fromCategoryId);
+                    bool isValidInt = int.TryParse(content, out int fromCategoryId);
                     if (isValidInt)
                     {
                         param.FromCategoryId = fromCategoryId;
@@ -45,12 +45,17 @@ namespace web_sync.Services
                     {
                         _categoryObRepository.ReplaceInto(new CategoryObModel()
                         {
-                            CategoryId = item.CategoryId,
-                            Name = item.Name
+                            CategoryId = item?.CategoryId,
+                            Name = item?.Name,
+                            Description = item?.Description,
+                            Path = item?.Path,
+                            ParentId = item?.ParentId,
+                            CreatedAt = item?.CreatedAt,
+                            UpdatedAt = item?.UpdatedAt
                         });
-                        await _fileLogService.writeFile("category-insert", item.categoryId.ToString() ?? "");
+                        await _fileLogService.writeFile("category-insert", item?.CategoryId.ToString() ?? "");
                     }
-                    param.Offset = param.Offset + limit;
+                    param.Offset += limit;
                     result = await _categoryCbRepository.GetAll(param);
                 }
                 return true;
@@ -73,11 +78,16 @@ namespace web_sync.Services
                     {
                         _categoryObRepository.ReplaceInto(new CategoryObModel()
                         {
-                            CategoryId = item.categoryId,
-                            Name = item.Name
+                            CategoryId = item?.CategoryId,
+                            Name = item?.Name,
+                            Description = item?.Description,
+                            Path = item?.Path,
+                            ParentId = item?.ParentId,
+                            CreatedAt = item?.CreatedAt,
+                            UpdatedAt = item?.UpdatedAt
                         });
                     }
-                    param.Offset = param.Offset + limit;
+                    param.Offset += limit;
                     result = await _categoryCbRepository.GetAll(param);
                 }
                 return true;
@@ -91,17 +101,17 @@ namespace web_sync.Services
         {
             try
             {
-                int limit = 1000, fromLogId;
+                int limit = 1000;
                 string content = await _fileLogService.readFile("category-query-log");
                 var param = new LogDto() {
                     ObjectName = "category",
-                    ObjectTypes = new[] { "update", "delete" },
+                    ObjectTypes = new[] { "delete" },
                     Limit = limit,
                     Offset = 0
                 };
                 if (content != null && content != "")
                 {
-                    bool isValidInt = int.TryParse(content, out fromLogId);
+                    bool isValidInt = int.TryParse(content, out int fromLogId);
                     if (isValidInt)
                     {
                         param.FromLogId = fromLogId;
@@ -112,24 +122,29 @@ namespace web_sync.Services
                 {
                     foreach (var item in result)
                     {
-                        if(item.ObjectType == "update")
+                        if(item?.ObjectType == "update")
                         {
                             var categoryData = await _categoryCbRepository.GetById(item.ObjectId ?? 0);
                             if(categoryData != null)
                             {
                                 _categoryObRepository.ReplaceInto(new CategoryObModel()
                                 {
-                                    CategoryId = categoryData.categoryId,
-                                    Name = categoryData.Name
+                                    CategoryId = categoryData?.CategoryId,
+                                    Name = categoryData?.Name,
+                                    Description = categoryData?.Description,
+                                    Path = categoryData?.Path,
+                                    ParentId = categoryData?.ParentId,
+                                    CreatedAt = categoryData?.CreatedAt,
+                                    UpdatedAt = categoryData?.UpdatedAt
                                 });
 
                             }
                             
                         } else
                         {
-                            _categoryObRepository.Delete(item.ObjectId ?? 0);
+                            _categoryObRepository.Delete(item?.ObjectId ?? 0);
                         }
-                        await _fileLogService.writeFile("category-query-log", item.LogId.ToString() ?? "");
+                        await _fileLogService.writeFile("category-query-log", item?.LogId?.ToString() ?? "");
                     }
                     param.Offset += limit;
                     result = await _logCbRepository.GetAll(param);
@@ -144,8 +159,11 @@ namespace web_sync.Services
 
         public async Task<bool> syncAll()
         {
-            bool bol = false;
-            bol = await syncInsert();
+            bool bol = await syncInsert();
+            if (!bol)
+            {
+                return false;
+            }
             bol = await syncUpdateOrDelete();
             return bol;
         }

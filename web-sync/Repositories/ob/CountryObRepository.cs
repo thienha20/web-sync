@@ -7,7 +7,7 @@ namespace web_sync.Repositories.ob
 {
     public interface ICountryObRepository
     {
-        Task<IEnumerable<CountryObModel>?> GetAll(CountryDto param);
+        Task<IEnumerable<CountryObModel?>?> GetAll(CountryDto param);
         Task<CountryObModel?> GetById(long id);
         void Insert(CountryObModel Country);
         void ReplaceInto(CountryObModel Country);
@@ -26,7 +26,7 @@ namespace web_sync.Repositories.ob
             _connection = connection;
         }
 
-        public async Task<IEnumerable<CountryObModel>?> GetAll(CountryDto param)
+        public async Task<IEnumerable<CountryObModel?>?> GetAll(CountryDto param)
         {
             string fields = "*";
             string where = " WHERE true ";
@@ -36,6 +36,11 @@ namespace web_sync.Repositories.ob
             if (param.CountryId != null)
             {
                 where += " AND country_id = @CountryId";
+            }
+
+            if (param.CountryIds != null)
+            {
+                where += " AND country_id = ANY(@CountryIds)";
             }
 
             if (param.FromCountryId != null)
@@ -250,10 +255,8 @@ namespace web_sync.Repositories.ob
         {
             string query = "UPDATE " + table + " SET ";
             List<string> dataSet = new List<string>();
-            if (Country.CountryId != null)
-            {
-                dataSet.Add("country_id = @NameCountryId");
-            }
+            Country.CountryId = id;
+
             if (Country.CountryName != null)
             {
                 dataSet.Add("country_name = @CountryName");

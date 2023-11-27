@@ -7,12 +7,13 @@ namespace web_sync.Repositories.cb
 {
     public interface IUserCbRepository
     {
-        IEnumerable<UserCbModel> GetAll(UserDto param);
+        Task<IEnumerable<UserCbModel?>?> GetAll(UserDto param);
+        Task<UserCbModel?> GetById(long id);
         void Insert(UserCbModel User);
         void ReplaceInto(UserCbModel User);
         void BulkInsert(List<UserCbModel> User);
-        void Update(int id, UserCbModel User);
-        void Delete(int id);
+        void Update(long id, UserCbModel User);
+        void Delete(long id);
     }
 
     public class UserCbRepository : IUserCbRepository
@@ -24,7 +25,7 @@ namespace web_sync.Repositories.cb
             _connection = connection;
         }
 
-        public IEnumerable<UserCbModel> GetAll(UserDto param)
+        public async Task<IEnumerable<UserCbModel?>?> GetAll(UserDto param)
         {
             string fields = "*";
             string where = " WHERE true ";
@@ -57,19 +58,17 @@ namespace web_sync.Repositories.cb
                 where += " AND created_at >= @CreatedDateFrom";
             }
 
-            if (param.Limit != null)
+            if (param.Offset != null)
             {
-                if(param.Offset != null)
-                {
-                    limit += " limit " + param.Offset.ToString() + ", " + param.Limit.ToString();
-                }
-                else
-                {
-                    limit += " limit " + param.Limit.ToString();
-                }     
+                limit += " OFFSET " + param.Offset.ToString();
             }
 
-            if(param.SortBy != null)
+            if (param.Limit != null)
+            {
+                limit += " LIMIT " + param.Limit.ToString();
+            }
+
+            if (param.SortBy != null)
             {
                 string sortOrder = param.SortOrder != "asc" ? " desc": " asc" ;
                 string[] sortBy = { "user_id", "created_at", "country_id", "email", "full_name", "username" };
@@ -96,7 +95,47 @@ namespace web_sync.Repositories.cb
             string sql = "SELECT " + fields + " FROM " + table;
             sql += where + sort + limit;
 
-            return _connection.Query<UserCbModel>(sql, param);
+            var res = await _connection.QueryAsync<dynamic>(sql, param);
+            if (res == null)
+            {
+                return null;
+            }
+            var data = res.Select(p => new UserCbModel
+            {
+                UserId = p.user_id ?? null,
+                UserName = p.user_name ?? null,
+                FullName = p.full_name ?? null,
+                Email = p.email ?? null,
+                CountryId = p.country_id ?? null,   
+                CreatedAt = p.created_at ?? null,
+                UpdatedAt = p.updated_at ?? null,   
+            });
+            return data;
+        }
+
+        public async Task<UserCbModel?> GetById(long id)
+        {
+            if (id > 0)
+            {
+                string sql = "SELECT * FROM " + table + " WHERE user_id = @Id";
+                var res = await _connection.QueryFirstOrDefaultAsync<dynamic>(sql, new { Id = id });
+                if (res == null)
+                {
+                    return null;
+                }
+                var data = new UserCbModel()
+                {
+                    UserId = res.user_id ?? null,
+                    UserName = res.user_name ?? null,
+                    FullName = res.full_name ?? null,
+                    Email = res.email ?? null,
+                    CountryId = res.country_id ?? null,
+                    CreatedAt = res.created_at ?? null,
+                    UpdatedAt = res.updated_at ?? null,
+                };
+                return data;
+            }
+            return null;
         }
 
         public void Insert(UserCbModel User)
@@ -220,7 +259,7 @@ namespace web_sync.Repositories.cb
 
         public void ReplaceInto(UserCbModel User)
         {
-            string query = "INSERT INTO " + table;
+            string query = "INSERT INTO " + table + "(";
             List<string> column = new List<string>();
             List<string> dataSet = new List<string>();
             List<string> dataUpdate = new List<string>();
@@ -266,15 +305,16 @@ namespace web_sync.Repositories.cb
                 dataUpdate.Add("updated_at = @UpdatedAt");
             }
 
-            query += string.Join(", ", column) + " VALUES (" + string.Join(", ", dataSet) + ") ON CONFLICT (user_id) DO UPDATE SET " + string.Join(", ", dataUpdate);
+            query += string.Join(", ", column) + ") VALUES (" + string.Join(", ", dataSet) + ") ON CONFLICT (user_id) DO UPDATE SET " + string.Join(", ", dataUpdate);
             _connection.Execute(query, User);
         }
 
-        public void Update(int id, UserCbModel User)
+        public void Update(long id, UserCbModel User)
         {
             string query = "UPDATE " + table + " SET ";
             List<string> dataSet = new List<string>();
-            if(User.FullName != null)
+            User.UserId = id;
+            if (User.FullName != null)
             {
                 dataSet.Add("full_name = @FullName");
             }
@@ -290,10 +330,7 @@ namespace web_sync.Repositories.cb
             {
                 dataSet.Add("country_id = @CountryId");
             }
-            if (User.UserId != null)
-            {
-                dataSet.Add("user_id = @UserId");
-            }
+            
             if (User.CreatedAt != null)
             {
                 dataSet.Add("created_at = @CreatedAt");
@@ -304,14 +341,16 @@ namespace web_sync.Repositories.cb
             }
             query += string.Join(", ", dataSet) + " WHERE user_id = @UserId";
             _connection.Execute(query, User);
-            // Thực hiện logic để cập nhật entity trong cơ sở dữ liệu
         }
 
-        public void Delete(int id)
+        public void Delete(long id)
         {
-            // Thực hiện logic để xóa entity từ cơ sở dữ liệu
-            string query = "DELETE FROM " + table + " WHERE user_id = @UserId";
-            _connection.Execute(query, new { UserId = id } );
+            if(id > 0)
+            {
+                string query = "DELETE FROM " + table + " WHERE user_id = @UserId";
+                _connection.Execute(query, new { UserId = id });
+            }
+            
         }
     }
 }

@@ -7,7 +7,7 @@ namespace web_sync.Repositories.ob
 {
     public interface IRegionObRepository
     {
-        Task<IEnumerable<RegionObModel>?> GetAll(RegionDto param);
+        Task<IEnumerable<RegionObModel?>> GetAll(RegionDto param);
         Task<RegionObModel?> GetById(long id);
         void Insert(RegionObModel Region);
         void ReplaceInto(RegionObModel Region);
@@ -26,7 +26,7 @@ namespace web_sync.Repositories.ob
             _connection = connection;
         }
 
-        public async Task<IEnumerable<RegionObModel>?> GetAll(RegionDto param)
+        public async Task<IEnumerable<RegionObModel?>> GetAll(RegionDto param)
         {
             string fields = "*";
             string where = " WHERE true ";
@@ -36,6 +36,11 @@ namespace web_sync.Repositories.ob
             if (param.RegionId != null)
             {
                 where += " AND region_id = @RegionId";
+            }
+
+            if (param.RegionIds != null)
+            {
+                where += " AND region_id = ANY(@RegionIds)";
             }
 
             if (param.RegionName != null)
@@ -193,14 +198,11 @@ namespace web_sync.Repositories.ob
         {
             string query = "UPDATE " + table + " SET ";
             List<string> dataSet = new List<string>();
+            Region.RegionId = id;
+
             if (Region.RegionName != null)
             {
                 dataSet.Add("region_name = @RegionName");
-            }
-
-            if (Region.RegionId != null)
-            {
-                dataSet.Add("region_id = @RegionId");
             }
 
             query += string.Join(", ", dataSet) + " WHERE region_id = @RegionId";
@@ -209,8 +211,13 @@ namespace web_sync.Repositories.ob
 
         public void Delete(long id)
         {
-            string query = "DELETE FROM " + table + " WHERE region_id = @RegionId";
-            _connection.Execute(query, new { RegionId = id });
+            if (id > 0)
+            {
+                string query = "DELETE FROM " + table + " WHERE region_id = @RegionId";
+                _connection.Execute(query, new { RegionId = id });
+
+            }
+
         }
     }
 }

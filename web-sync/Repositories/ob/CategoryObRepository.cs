@@ -7,12 +7,13 @@ namespace web_sync.Repositories.ob
 {
     public interface ICategoryObRepository
     {
-        IEnumerable<CategoryObModel?> GetAll(CategoryDto param);
+        Task<IEnumerable<CategoryObModel?>?> GetAll(CategoryDto param);
+        Task<CategoryObModel?> GetById(long id);
         void Insert(CategoryObModel Category);
         void ReplaceInto(CategoryObModel Category);
         void BulkInsert(List<CategoryObModel> Category);
-        void Update(int id, CategoryObModel Category);
-        void Delete(int id);
+        void Update(long id, CategoryObModel Category);
+        void Delete(long id);
     }
 
     public class CategoryObRepository : ICategoryObRepository
@@ -25,16 +26,26 @@ namespace web_sync.Repositories.ob
             _connection = connection;
         }
 
-        public IEnumerable<CategoryObModel?> GetAll(CategoryDto param)
+        public async Task<IEnumerable<CategoryObModel?>?> GetAll(CategoryDto param)
         {
             string fields = "*";
             string where = " WHERE true ";
             string limit = "";
             string sort = "";
 
-            if(param.CategoryId != null)
+            if (param.CategoryId != null)
             {
                 where += " AND category_id = @CategoryId";
+            }
+
+            if (param.FromCategoryId != null)
+            {
+                where += " AND category_id > @FromCategoryId";
+            }
+
+            if (param.CategoryIds != null)
+            {
+                where += " AND category_id = ANY(@CategoryId)";
             }
 
             if (param.ParentId != null)
@@ -64,9 +75,9 @@ namespace web_sync.Repositories.ob
 
             if (param.SortBy != null)
             {
-                string sortOrder = param.SortOrder != "asc" ? " desc": " asc" ;
+                string sortOrder = param.SortOrder != "asc" ? " desc" : " asc";
                 string[] sortBy = { "category_id", "name", "created_at" };
-                sort += " ORDER BY " + (sortBy.Contains(param.SortBy) ? param.SortBy: sortBy[0]) + sortOrder;
+                sort += " ORDER BY " + (sortBy.Contains(param.SortBy) ? param.SortBy : sortBy[0]) + sortOrder;
             }
 
             if (param.Fields != null)
@@ -89,7 +100,47 @@ namespace web_sync.Repositories.ob
             string sql = "SELECT " + fields + " FROM " + table;
             sql += where + sort + limit;
 
-            return _connection.Query<CategoryObModel>(sql, param);
+            var res = await _connection.QueryAsync<dynamic>(sql, param);
+            if (res == null)
+            {
+                return null;
+            }
+            var data = res.Select(p => new CategoryObModel
+            {
+                CategoryId = p.category_id ?? null,
+                Name = p.name ?? null,
+                Description = p.description ?? null,
+                ParentId = p.parent_id ?? null,
+                Path = p.path ?? null,
+                CreatedAt = p.created_at ?? null,
+                UpdatedAt = p.updated_at ?? null
+            });
+            return data;
+        }
+
+        public async Task<CategoryObModel?> GetById(long id)
+        {
+            if (id > 0)
+            {
+                string sql = "SELECT * FROM " + table + " WHERE category_id = @Id";
+                var res = await _connection.QueryFirstOrDefaultAsync<dynamic>(sql, new { Id = id });
+                if (res == null)
+                {
+                    return null;
+                }
+                var data = new CategoryObModel()
+                {
+                    CategoryId = res.category_id ?? null,
+                    Name = res.name ?? null,
+                    Description = res.description ?? null,
+                    ParentId = res.parent_id ?? null,
+                    Path = res.path ?? null,
+                    CreatedAt = res.created_at ?? null,
+                    UpdatedAt = res.updated_at ?? null
+                };
+                return data;
+            }
+            return null;
         }
 
         public void Insert(CategoryObModel Category)
@@ -168,12 +219,12 @@ namespace web_sync.Repositories.ob
                 {
                     column.Add("updated_at");
                 }
-                using (var writer = _connection.BeginBinaryImport("COPY " + table + " (" + string.Join(", ", column)+ ") FROM STDIN (FORMAT BINARY)"))
+                using (var writer = _connection.BeginBinaryImport("COPY " + table + " (" + string.Join(", ", column) + ") FROM STDIN (FORMAT BINARY)"))
                 {
                     foreach (var item in Categories)
                     {
                         writer.StartRow();
-                        if(item.Name != null)
+                        if (item.Name != null)
                         {
                             writer.Write(item.Name, NpgsqlTypes.NpgsqlDbType.Text);
                         }
@@ -206,7 +257,7 @@ namespace web_sync.Repositories.ob
 
         public void ReplaceInto(CategoryObModel Category)
         {
-            string query = "INSERT INTO " + table;
+            string query = "INSERT INTO " + table + "(";
             List<string> column = new List<string>();
             List<string> dataSet = new List<string>();
             List<string> dataUpdate = new List<string>();
@@ -251,13 +302,14 @@ namespace web_sync.Repositories.ob
                 dataSet.Add("@UpdatedAt");
                 dataUpdate.Add("updated_at = @UpdatedAt");
             }
-            query += string.Join(", ", column) + " VALUES (" + string.Join(", ", dataSet) + ") ON CONFLICT (category_id) DO UPDATE SET " + string.Join(", ", dataUpdate);
+            query += string.Join(", ", column) + ") VALUES (" + string.Join(", ", dataSet) + ") ON CONFLICT (category_id) DO UPDATE SET " + string.Join(", ", dataUpdate);
             _connection.Execute(query, Category);
         }
 
-        public void Update(int id, CategoryObModel Category)
+        public void Update(long id, CategoryObModel Category)
         {
             string query = "UPDATE " + table + " SET ";
+            Category.CategoryId = id;
             List<string> dataSet = new List<string>();
             if (Category.Path != null)
             {
@@ -289,14 +341,15 @@ namespace web_sync.Repositories.ob
             }
             query += string.Join(", ", dataSet) + " WHERE category_id = @CategoryId";
             _connection.Execute(query, Category);
-            // Thực hiện logic để cập nhật entity trong cơ sở dữ liệu
         }
-        
-        public void Delete(int id)
+
+        public void Delete(long id)
         {
-            // Thực hiện logic để xóa entity từ cơ sở dữ liệu
-            string query = "DELETE FROM " + table + " WHERE category_id = @CategoryId";
-            _connection.Execute(query, new { CategoryId = id } );
+            if (id > 0)
+            {
+                string query = "DELETE FROM " + table + " WHERE category_id = @CategoryId";
+                _connection.Execute(query, new { CategoryId = id });
+            }
         }
     }
 }
