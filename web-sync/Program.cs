@@ -1,7 +1,7 @@
 ﻿using Npgsql;
-using sync_data.Repositories.cb;
-using sync_data.Repositories.ob;
-using sync_data.Services;
+using web_sync.Repositories.cb;
+using web_sync.Repositories.ob;
+using web_sync.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -43,8 +43,10 @@ builder.Services.AddScoped<UserCbRepository>(_ => new UserCbRepository(connectCb
 builder.Services.AddScoped<RegionCbRepository>(_ => new RegionCbRepository(connectCb));
 builder.Services.AddScoped<PostCbRepository>(_ => new PostCbRepository(connectCb));
 
+builder.Services.AddScoped<FileLogService>();
 builder.Services.AddScoped<PostService>();
 builder.Services.AddScoped<CountryService>();
+builder.Services.AddScoped<RegionService>();
 
 var app = builder.Build();
 

@@ -1,14 +1,14 @@
-﻿using sync_data.Models.cb;
+﻿using web_sync.Models.cb;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
 
-namespace sync_data.Models.ob
+namespace web_sync.Models.ob
 {
     public class PostObModel
     {
         [Key]
         [Column("post_id")]
-        public int? PostId { get; set; }
+        public long? PostId { get; set; }
 
         [Column("name")]
         public string? Name { get; set; }
@@ -17,11 +17,11 @@ namespace sync_data.Models.ob
         public string? Description { get; set; }
 
         [Column("user_id")]
-        public int? UserId { get; set; }
+        public long? UserId { get; set; }
         public UserCbModel? User { get; set; }
 
         [Column("category_id")]
-        public int? CategoryId { get; set; }
+        public long? CategoryId { get; set; }
         public CategoryCbModel? Category { get; set; }
 
         [Column("created_at")]

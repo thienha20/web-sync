@@ -1,9 +1,9 @@
 ﻿using Dapper;
 using Npgsql;
-using sync_data.Dtos;
-using sync_data.Models.ob;
+using web_sync.Dtos;
+using web_sync.Models.ob;
 
-namespace sync_data.Repositories.ob
+namespace web_sync.Repositories.ob
 {
     public interface ICategoryObRepository
     {
@@ -52,19 +52,17 @@ namespace sync_data.Repositories.ob
                 where += " AND created_at >= @CreatedDateFrom";
             }
 
-            if (param.Limit != null)
+            if (param.Offset != null)
             {
-                if(param.Offset != null)
-                {
-                    limit += " limit " + param.Offset.ToString() + ", " + param.Limit.ToString();
-                }
-                else
-                {
-                    limit += " limit " + param.Limit.ToString();
-                }     
+                limit += " OFFSET " + param.Offset.ToString();
             }
 
-            if(param.SortBy != null)
+            if (param.Limit != null)
+            {
+                limit += " LIMIT " + param.Limit.ToString();
+            }
+
+            if (param.SortBy != null)
             {
                 string sortOrder = param.SortOrder != "asc" ? " desc": " asc" ;
                 string[] sortBy = { "category_id", "name", "created_at" };

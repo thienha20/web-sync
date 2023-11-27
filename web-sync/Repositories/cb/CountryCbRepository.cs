@@ -1,18 +1,19 @@
 ﻿using Dapper;
 using Npgsql;
-using sync_data.Dtos;
-using sync_data.Models.cb;
+using web_sync.Dtos;
+using web_sync.Models.cb;
 
-namespace sync_data.Repositories.cb
+namespace web_sync.Repositories.cb
 {
     public interface ICountryCbRepository
     {
-        Task<IEnumerable<CountryCbModel>> GetAll(CountryDto param);
+        Task<IEnumerable<CountryCbModel>?> GetAll(CountryDto param);
+        Task<CountryCbModel?> GetById(long id);
         void Insert(CountryCbModel Country);
         void ReplaceInto(CountryCbModel Country);
         void BulkInsert(List<CountryCbModel> Country);
-        void Update(int id, CountryCbModel Country);
-        void Delete(int id);
+        void Update(long id, CountryCbModel Country);
+        void Delete(long id);
     }
 
     public class CountryCbRepository : ICountryCbRepository
@@ -25,7 +26,7 @@ namespace sync_data.Repositories.cb
             _connection = connection;
         }
 
-        public async Task<IEnumerable<CountryCbModel>> GetAll(CountryDto param)
+        public async Task<IEnumerable<CountryCbModel>?> GetAll(CountryDto param)
         {
             string fields = "*";
             string where = " WHERE true ";
@@ -35,6 +36,16 @@ namespace sync_data.Repositories.cb
             if(param.CountryId != null)
             {
                 where += " AND country_id = @CountryId";
+            }
+
+            if (param.CountryIds != null)
+            {
+                where += " AND country_id = ANY(@CountryIds)";
+            }
+
+            if (param.FromCountryId != null)
+            {
+                where += " AND country_id > @FromCountryId";
             }
 
             if (param.CountryCode != null)
@@ -53,17 +64,14 @@ namespace sync_data.Repositories.cb
                 where += " AND region_id = @RegionId";
             }
 
+            if (param.Offset != null)
+            {
+                limit += " OFFSET " + param.Offset.ToString();
+            }
 
             if (param.Limit != null)
             {
-                if(param.Offset != null)
-                {
-                    limit += " limit " + param.Offset.ToString() + ", " + param.Limit.ToString();
-                }
-                else
-                {
-                    limit += " limit " + param.Limit.ToString();
-                }     
+                limit += " LIMIT " + param.Limit.ToString();
             }
 
             if(param.SortBy != null)
@@ -93,6 +101,10 @@ namespace sync_data.Repositories.cb
             string sql = "SELECT " + fields + " FROM " + table;
             sql += where + sort + limit;
             var res = await _connection.QueryAsync<dynamic>(sql, param);
+            if(res == null)
+            {
+                return null;
+            }
             var data = res.Select(p => new CountryCbModel
             {
                 RegionId = p.region_id ?? null,
@@ -103,6 +115,27 @@ namespace sync_data.Repositories.cb
             return data;
         }
 
+        public async Task<CountryCbModel?> GetById(long id)
+        {
+            if (id > 0)
+            {
+                string sql = "SELECT * FROM " + table + " WHERE country_id = @Id";
+                var res = await _connection.QueryFirstOrDefaultAsync<dynamic>(sql, new { Id = id });
+                if (res == null)
+                {
+                    return null;
+                }
+                var data = new CountryCbModel()
+                {
+                    CountryId = res.country_id ?? null,
+                    CountryName = res.country_name ?? null,
+                    CountryCode = res.country_code ?? null,
+                    RegionId = res.region_id ?? null,
+                };
+                return data;
+            }
+            return null;
+        }
         public void Insert(CountryCbModel Country)
         {
             List<string> column = new List<string>();
@@ -184,7 +217,7 @@ namespace sync_data.Repositories.cb
 
         public void ReplaceInto(CountryCbModel Country)
         {
-            string query = "INSERT INTO " + table;
+            string query = "INSERT INTO " + table + "(";
             List<string> column = new List<string>();
             List<string> dataSet = new List<string>();
             List<string> dataUpdate = new List<string>();
@@ -214,11 +247,11 @@ namespace sync_data.Repositories.cb
                 dataUpdate.Add("region_id = @RegionId");
             }
             
-            query += string.Join(", ", column) + " VALUES (" + string.Join(", ", dataSet) + ") ON CONFLICT (country_id) DO UPDATE SET " + string.Join(", ", dataUpdate);
+            query += string.Join(", ", column) + ") VALUES (" + string.Join(", ", dataSet) + ") ON CONFLICT (country_id) DO UPDATE SET " + string.Join(", ", dataUpdate);
             _connection.Execute(query, Country);
         }
 
-        public void Update(int id, CountryCbModel Country)
+        public void Update(long id, CountryCbModel Country)
         {
             string query = "UPDATE " + table + " SET ";
             List<string> dataSet = new List<string>();
@@ -242,10 +275,13 @@ namespace sync_data.Repositories.cb
             _connection.Execute(query, Country);
         }
 
-        public void Delete(int id)
+        public void Delete(long id)
         {
-            string query = "DELETE FROM " + table + " WHERE country_id = @CountryId";
-            _connection.Execute(query, new { CountryId = id } );
+            if (id > 0)
+            {
+                string query = "DELETE FROM " + table + " WHERE country_id = @CountryId";
+                _connection.Execute(query, new { CountryId = id });
+            }
         }
     }
 }

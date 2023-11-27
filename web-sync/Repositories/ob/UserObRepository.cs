@@ -1,9 +1,9 @@
 ﻿using Dapper;
 using Npgsql;
-using sync_data.Dtos;
-using sync_data.Models.ob;
+using web_sync.Dtos;
+using web_sync.Models.ob;
 
-namespace sync_data.Repositories.ob
+namespace web_sync.Repositories.ob
 {
     public interface IUserObRepository
     {

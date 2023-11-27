@@ -1,18 +1,19 @@
 ﻿using Dapper;
 using Npgsql;
-using sync_data.Dtos;
-using sync_data.Models.cb;
+using web_sync.Dtos;
+using web_sync.Models.cb;
 
-namespace sync_data.Repositories.cb
+namespace web_sync.Repositories.cb
 {
     public interface ILogCbRepository
     {
-        IEnumerable<LogCbModel> GetAll(LogDto param);
+        Task<IEnumerable<LogCbModel>?> GetAll(LogDto param);
+        Task<LogCbModel?> GetById(long id);
         void Insert(LogCbModel Log);
         void ReplaceInto(LogCbModel Log);
         void BulkInsert(List<LogCbModel> Log);
-        void Update(int id, LogCbModel Log);
-        void Delete(int id);
+        void Update(long id, LogCbModel Log);
+        void Delete(long id);
     }
 
     public class LogCbRepository : ILogCbRepository
@@ -24,7 +25,7 @@ namespace sync_data.Repositories.cb
             _connection = connection;
         }
 
-        public IEnumerable<LogCbModel> GetAll(LogDto param)
+        public async Task<IEnumerable<LogCbModel>?> GetAll(LogDto param)
         {
             string fields = "*";
             string where = " WHERE true ";
@@ -36,14 +37,29 @@ namespace sync_data.Repositories.cb
                 where += " AND log_id = @LogId";
             }
 
-            if(param.ObjectName != null)
+            if (param.FromLogId != null)
+            {
+                where += " AND log_id > @FromLogId";
+            }
+
+            if (param.ObjectName != null)
             {
                 where += " AND object_name = @ObjectName";
             }
 
-            if(param.ObjectType != null)
+            if (param.ObjectNames != null)
+            {
+                where += " AND object_name = ANY(@ObjectNames)";
+            }
+
+            if (param.ObjectType != null)
             {
                 where += " AND object_type = @ObjectType";
+            }
+
+            if (param.ObjectTypes != null)
+            {
+                where += " AND object_type = ANY(@ObjectTypes)";
             }
 
             if (param.ObjectId != null)
@@ -61,19 +77,17 @@ namespace sync_data.Repositories.cb
                 where += " AND timestamps <= @CreatedDateFrom";
             }
 
-            if (param.Limit != null)
+            if (param.Offset != null)
             {
-                if(param.Offset != null)
-                {
-                    limit += " limit " + param.Offset.ToString() + ", " + param.Limit.ToString();
-                }
-                else
-                {
-                    limit += " limit " + param.Limit.ToString();
-                }     
+                limit += " OFFSET " + param.Offset.ToString();
             }
 
-            if(param.SortBy != null)
+            if (param.Limit != null)
+            {
+                limit += " LIMIT " + param.Limit.ToString();
+            }
+
+            if (param.SortBy != null)
             {
                 string sortOrder = param.SortOrder != "asc" ? " desc": " asc" ;
                 string[] sortBy = { "log_id", "object_type", "object_name", "timestamps" };
@@ -97,10 +111,54 @@ namespace sync_data.Repositories.cb
                 }
             }
 
-            string sql = "SELECT " + fields + " FROMdb_queries_logs";
+            string sql = "SELECT " + fields + " FROM " + table;
             sql += where + sort + limit;
+            try
+            {
+                var res = await _connection.QueryAsync<dynamic>(sql, param);
+                if (res == null)
+                {
+                    return null;
+                }
+                var data = res.Select(p => new LogCbModel
+                {
+                    LogId = p.log_id ?? null,
+                    ObjectName = p.object_name ?? null,
+                    ObjectType = p.object_type ?? null,
+                    ObjectId = p.object_id ?? null,
+                    Timestamps = p.timestamps ?? null,
+                });
+                return data;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+                return null;
+            }
+            
+        }
 
-            return _connection.Query<LogCbModel>(sql, param);
+        public async Task<LogCbModel?> GetById(long id)
+        {
+            if (id > 0)
+            {
+                string sql = "SELECT * FROM " + table + " WHERE country_id = @Id";
+                var res = await _connection.QueryFirstOrDefaultAsync<dynamic>(sql, new { Id = id });
+                if (res == null)
+                {
+                    return null;
+                }
+                var data = new LogCbModel()
+                {
+                    LogId = res.log_id ?? null,
+                    ObjectName = res.object_name ?? null,
+                    ObjectType = res.object_type ?? null,
+                    ObjectId = res.object_id ?? null,
+                    Timestamps = res.timestamps ?? null,
+                };
+                return data;
+            }
+            return null;
         }
 
         public void Insert(LogCbModel Log)
@@ -197,7 +255,7 @@ namespace sync_data.Repositories.cb
 
         public void ReplaceInto(LogCbModel Log)
         {
-            string query = "INSERT INTO " + table;
+            string query = "INSERT INTO " + table + "(";
             List<string> column = new List<string>();
             List<string> dataSet = new List<string>();
             List<string> dataUpdate = new List<string>();
@@ -231,11 +289,11 @@ namespace sync_data.Repositories.cb
                 dataUpdate.Add("timestamps = @Timestamps");
             }
             
-            query += string.Join(", ", column) + " VALUES (" + string.Join(", ", dataSet) + ") ON CONFLICT (log_id) DO UPDATE SET " + string.Join(", ", dataUpdate);
+            query += string.Join(", ", column) + ") VALUES (" + string.Join(", ", dataSet) + ") ON CONFLICT (log_id) DO UPDATE SET " + string.Join(", ", dataUpdate);
             _connection.Execute(query, Log);
         }
 
-        public void Update(int id, LogCbModel Log)
+        public void Update(long id, LogCbModel Log)
         {
             string query = "UPDATE " + table + " SET ";
             List<string> dataSet = new List<string>();
@@ -261,14 +319,15 @@ namespace sync_data.Repositories.cb
             }
             query += string.Join(", ", dataSet) + " WHERE log_id = @LogId";
             _connection.Execute(query, Log);
-            // Thực hiện logic để cập nhật entity trong cơ sở dữ liệu
         }
 
-        public void Delete(int id)
+        public void Delete(long id)
         {
-            // Thực hiện logic để xóa entity từ cơ sở dữ liệu
-            string query = "DELETE FROM " + table + " WHERE log_id = @LogId";
-            _connection.Execute(query, new { LogId = id } );
+            if (id > 0)
+            {
+                string query = "DELETE FROM " + table + " WHERE log_id = @LogId";
+                _connection.Execute(query, new { LogId = id });
+            }
         }
     }
 }

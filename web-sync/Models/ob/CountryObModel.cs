@@ -1,14 +1,14 @@
-﻿using sync_data.Models.cb;
+﻿using web_sync.Models.cb;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
 
-namespace sync_data.Models.ob
+namespace web_sync.Models.ob
 {
     public class CountryObModel
     {
         [Key]
         [Column("country_id")]
-        public int? CountryId { get; set; }
+        public long? CountryId { get; set; }
 
         [Column("country_code")]
         public string? CountryCode { get; set; }
@@ -17,7 +17,7 @@ namespace sync_data.Models.ob
         public string? CountryName { get; set; }
 
         [Column("region_id")]
-        public int? RegionId { get; set; }
+        public long? RegionId { get; set; }
         public RegionCbModel? Region { get; set; }
     }
 }

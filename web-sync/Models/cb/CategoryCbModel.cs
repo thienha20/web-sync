@@ -1,16 +1,16 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace sync_data.Models.cb
+namespace web_sync.Models.cb
 {
     public class CategoryCbModel
     {
         [Key]
         [Column("category_id")]
-        public int? CategoryId { get; set; }
+        public long? CategoryId { get; set; }
 
         [Column("parent_id")]
-        public int? ParentId { get; set; }
+        public long? ParentId { get; set; }
 
         [Column("name")]
         public string? Name { get; set; }

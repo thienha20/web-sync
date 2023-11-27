@@ -1,18 +1,19 @@
 ﻿using Dapper;
 using Npgsql;
-using sync_data.Dtos;
-using sync_data.Models.cb;
+using web_sync.Dtos;
+using web_sync.Models.cb;
 
-namespace sync_data.Repositories.cb
+namespace web_sync.Repositories.cb
 {
     public interface IRegionCbRepository
     {
-        IEnumerable<RegionCbModel> GetAll(RegionDto param);
+        Task<IEnumerable<RegionCbModel>?> GetAll(RegionDto param);
+        Task<RegionCbModel?> GetById(long id);
         void Insert(RegionCbModel Region);
         void ReplaceInto(RegionCbModel Region);
         void BulkInsert(List<RegionCbModel> Region);
-        void Update(int id, RegionCbModel Region);
-        void Delete(int id);
+        void Update(long id, RegionCbModel Region);
+        void Delete(long id);
     }
 
     public class RegionCbRepository : IRegionCbRepository
@@ -25,7 +26,7 @@ namespace sync_data.Repositories.cb
             _connection = connection;
         }
 
-        public IEnumerable<RegionCbModel> GetAll(RegionDto param)
+        public async Task<IEnumerable<RegionCbModel>?> GetAll(RegionDto param)
         {
             string fields = "*";
             string where = " WHERE true ";
@@ -37,25 +38,28 @@ namespace sync_data.Repositories.cb
                 where += " AND region_id = @RegionId";
             }
 
-            if(param.RegionName != null)
+            if (param.RegionIds != null)
+            {
+                where += " AND region_id = ANY(@RegionIds)";
+            }
+
+            if (param.RegionName != null)
             {
                 param.RegionName = "%" + param.RegionName + "%";
                 where += " AND region_name like @RegionName";
             }
 
-            if (param.Limit != null)
+            if (param.Offset != null)
             {
-                if(param.Offset != null)
-                {
-                    limit += " limit " + param.Offset.ToString() + ", " + param.Limit.ToString();
-                }
-                else
-                {
-                    limit += " limit " + param.Limit.ToString();
-                }     
+                limit += " OFFSET " + param.Offset.ToString();
             }
 
-            if(param.SortBy != null)
+            if (param.Limit != null)
+            {
+                limit += " LIMIT " + param.Limit.ToString();
+            }
+
+            if (param.SortBy != null)
             {
                 string sortOrder = param.SortOrder != "asc" ? " desc": " asc" ;
                 string[] sortBy = { "region_id", "region_name" };
@@ -79,10 +83,40 @@ namespace sync_data.Repositories.cb
                 }
             }
 
-            string sql = "SELECT " + fields + " FROM regions";
+            string sql = "SELECT " + fields + " FROM " + table;
             sql += where + sort + limit;
 
-            return _connection.Query<RegionCbModel>(sql, param);
+            var res = await _connection.QueryAsync<dynamic>(sql, param);
+            if (res == null)
+            {
+                return null;
+            }
+            var data = res.Select(p => new RegionCbModel
+            {
+                RegionId = p.region_id ?? null,
+                RegionName = p.region_name ?? null,
+            });
+            return data;
+        }
+
+        public async Task<RegionCbModel?> GetById(long id)
+        {
+            if (id > 0)
+            {
+                string sql = "SELECT * FROM " + table + " WHERE region_id = @Id";
+                var res = await _connection.QueryFirstOrDefaultAsync<dynamic>(sql, new { Id = id });
+                if (res == null)
+                {
+                    return null;
+                }
+                var data = new RegionCbModel()
+                {
+                    RegionId = res.region_id ?? null,
+                    RegionName = res.region_name ?? null,
+                };
+                return data;
+            }
+            return null;
         }
 
         public void Insert(RegionCbModel Region)
@@ -139,7 +173,7 @@ namespace sync_data.Repositories.cb
 
         public void ReplaceInto(RegionCbModel Region)
         {
-            string query = "INSERT INTO " + table;
+            string query = "INSERT INTO " + table + "(";
             List<string> column = new List<string>();
             List<string> dataSet = new List<string>();
             List<string> dataUpdate = new List<string>();
@@ -156,11 +190,11 @@ namespace sync_data.Repositories.cb
                 dataSet.Add("@RegionId");
             }
 
-            query += string.Join(", ", column) + " VALUES (" + string.Join(", ", dataSet) + ") ON CONFLICT (region_id) DO UPDATE SET " + string.Join(", ", dataUpdate);
+            query += string.Join(", ", column) + ") VALUES (" + string.Join(", ", dataSet) + ") ON CONFLICT (region_id) DO UPDATE SET " + string.Join(", ", dataUpdate);
             _connection.Execute(query, Region);
         }
 
-        public void Update(int id, RegionCbModel Region)
+        public void Update(long id, RegionCbModel Region)
         {
             string query = "UPDATE " + table + " SET ";
             List<string> dataSet = new List<string>();
@@ -178,7 +212,7 @@ namespace sync_data.Repositories.cb
             _connection.Execute(query, Region);
         }
 
-        public void Delete(int id)
+        public void Delete(long id)
         {
             string query = "DELETE FROM " + table + " WHERE region_id = @RegionId";
             _connection.Execute(query, new { RegionId = id } );

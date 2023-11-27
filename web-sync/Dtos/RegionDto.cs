@@ -1,8 +1,10 @@
-﻿namespace sync_data.Dtos
+﻿namespace web_sync.Dtos
 {
     public class RegionDto: BaseDto
     {
-        public int? RegionId { get; set; }
+        public long? RegionId { get; set; }
+        public long[]? RegionIds { get; set; }
+        public long? FromRegionId { get; set; }
         public string? RegionName { get; set; }
 
     }

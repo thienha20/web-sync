@@ -1,6 +1,6 @@
 ﻿using System.Security;
 
-namespace sync_data.Dtos
+namespace web_sync.Dtos
 {
     public class BaseDto
     {

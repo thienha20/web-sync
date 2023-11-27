@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using sync_data.Services;
+using web_sync.Services;
 
-namespace sync_data.Controllers
+namespace web_sync.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
@@ -9,16 +9,21 @@ namespace sync_data.Controllers
     {
         private readonly PostService _postService;
         private readonly CountryService _countryService;
-        public SyncController(PostService postService, CountryService countryService)
+        private readonly RegionService _regionService;
+        public SyncController(PostService postService, 
+            CountryService countryService,
+            RegionService regionService)
         {
             _postService = postService;
             _countryService = countryService;
+            _regionService = regionService;
         }
 
         [HttpGet("all")]
         public async Task<IActionResult> Index()
         {
-            var data = await _countryService.syncCountry();
+            var data = await _countryService.syncInsert();
+            //var dataRegion = await _regionService.syncUpdateOrDelete();
             return Ok(data);
         }
 

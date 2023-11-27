@@ -1,7 +1,7 @@
-﻿using sync_data.Repositories.ob;
-using sync_data.Repositories.cb;
+﻿using web_sync.Repositories.ob;
+using web_sync.Repositories.cb;
 
-namespace sync_data.Services
+namespace web_sync.Services
 {
     public class PostService
     {

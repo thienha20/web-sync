@@ -1,9 +1,9 @@
 ﻿using Dapper;
 using Npgsql;
-using sync_data.Dtos;
-using sync_data.Models.cb;
+using web_sync.Dtos;
+using web_sync.Models.cb;
 
-namespace sync_data.Repositories.cb
+namespace web_sync.Repositories.cb
 {
     public interface IPostCbRepository
     {

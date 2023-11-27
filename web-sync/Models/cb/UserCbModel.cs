@@ -1,14 +1,14 @@
 ﻿using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
 
-namespace sync_data.Models.cb
+namespace web_sync.Models.cb
 {
     public class UserCbModel
     {
 
         [Key]
         [Column("user_id")] 
-        public int? UserId { get; set; }
+        public long? UserId { get; set; }
 
         [Column("username")]
         public string? UserName { get; set; }
@@ -20,7 +20,7 @@ namespace sync_data.Models.cb
         public string? FullName { get; set; }
 
         [Column("country_id")]
-        public int? CountryId { get; set; }
+        public long? CountryId { get; set; }
         public CountryCbModel? Country { get; set; }
         public List<PostCbModel>? Posts { get; set; }
 
