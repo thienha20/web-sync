@@ -5,20 +5,20 @@ using web_sync.Dtos;
 using web_sync.Dtos.SyncParam;
 namespace web_sync.Services
 {
-    public class PostService
+    public class UserService
     {
-        private readonly PostObRepository _postObRepository;
-        private readonly PostCbRepository _postCbRepository;
+        private readonly UserObRepository _userObRepository;
+        private readonly UserCbRepository _userCbRepository;
         private readonly FileLogService _fileLogService;
         private readonly LogCbRepository _logCbRepository;
-        public PostService(PostObRepository PostObRepository,
-            PostCbRepository PostCbRepository,
+        public UserService(UserObRepository UserObRepository, 
+            UserCbRepository UserCbRepository,
             FileLogService fileLogService,
             LogCbRepository logCbRepository
             )
         {
-            _postObRepository = PostObRepository;
-            _postCbRepository = PostCbRepository;
+            _userObRepository = UserObRepository;
+            _userCbRepository = UserCbRepository;
             _fileLogService = fileLogService;
             _logCbRepository = logCbRepository;
         }
@@ -28,39 +28,38 @@ namespace web_sync.Services
             try
             {
                 int limit = 1000;
-                var param = new PostDto() { Limit = limit, Offset = 0 };
-                string content = await _fileLogService.readFile("post-insert");
-                if (content != null && content != "")
+                var param = new UserDto() { Limit = limit, Offset = 0 };
+                string content = await _fileLogService.readFile("user-insert");
+                if(content != null && content != "")
                 {
-                    bool isValidInt = int.TryParse(content, out int fromPostId);
+                    bool isValidInt = int.TryParse(content, out int fromUserId);
                     if (isValidInt)
                     {
-                        param.FromPostId = fromPostId;
+                        param.FromUserId = fromUserId;
                     }
                 }
-                var result = await _postCbRepository.GetAll(param);
+                var result = await _userCbRepository.GetAll(param);
                 while (result != null && result.Any())
                 {
                     foreach (var item in result)
                     {
-                        _postObRepository.ReplaceInto(new PostObModel()
+                        _userObRepository.ReplaceInto(new UserObModel()
                         {
-                            PostId = item?.PostId,
-                            Name = item?.Name,
-                            Description = item?.Description,
                             UserId = item?.UserId,
-                            CategoryId = item?.CategoryId,
+                            Email = item?.Email,
+                            UserName = item?.UserName,
+                            FullName = item?.FullName,
+                            CountryId = item?.CountryId,
                             CreatedAt = item?.CreatedAt,
                             UpdatedAt = item?.UpdatedAt
                         });
-                        await _fileLogService.writeFile("post-insert", item?.PostId.ToString() ?? "");
+                        await _fileLogService.writeFile("user-insert", item?.UserId.ToString() ?? "");
                     }
                     param.Offset += limit;
-                    result = await _postCbRepository.GetAll(param);
+                    result = await _userCbRepository.GetAll(param);
                 }
                 return true;
-            }
-            catch
+            } catch
             {
                 return false;
             }
@@ -71,25 +70,25 @@ namespace web_sync.Services
             try
             {
                 int limit = 1000;
-                var param = new PostDto() { Limit = limit, Offset = 0, PostIds = insertParam.id };
-                var result = await _postCbRepository.GetAll(param);
+                var param = new UserDto() { Limit = limit, Offset = 0, UserIds = insertParam.id };
+                var result = await _userCbRepository.GetAll(param);
                 while (result != null && result.Any())
                 {
                     foreach (var item in result)
                     {
-                        _postObRepository.ReplaceInto(new PostObModel()
+                        _userObRepository.ReplaceInto(new UserObModel()
                         {
-                            PostId = item?.PostId,
-                            Name = item?.Name,
-                            Description = item?.Description,
                             UserId = item?.UserId,
-                            CategoryId = item?.CategoryId,
+                            Email = item?.Email,
+                            UserName = item?.UserName,
+                            FullName = item?.FullName,
+                            CountryId = item?.CountryId,
                             CreatedAt = item?.CreatedAt,
                             UpdatedAt = item?.UpdatedAt
                         });
                     }
                     param.Offset += limit;
-                    result = await _postCbRepository.GetAll(param);
+                    result = await _userCbRepository.GetAll(param);
                 }
                 return true;
             }
@@ -103,10 +102,9 @@ namespace web_sync.Services
             try
             {
                 int limit = 1000;
-                string content = await _fileLogService.readFile("post-query-log");
-                var param = new LogDto()
-                {
-                    ObjectName = "post",
+                string content = await _fileLogService.readFile("user-query-log");
+                var param = new LogDto() {
+                    ObjectName = "user",
                     ObjectTypes = new[] { "delete" },
                     Limit = limit,
                     Offset = 0
@@ -124,30 +122,29 @@ namespace web_sync.Services
                 {
                     foreach (var item in result)
                     {
-                        if (item?.ObjectType == "update")
+                        if(item?.ObjectType == "update")
                         {
-                            var PostData = await _postCbRepository.GetById(item.ObjectId ?? 0);
-                            if (PostData != null)
+                            var UserData = await _userCbRepository.GetById(item.ObjectId ?? 0);
+                            if(UserData != null)
                             {
-                                _postObRepository.ReplaceInto(new PostObModel()
+                                _userObRepository.ReplaceInto(new UserObModel()
                                 {
-                                    PostId = PostData?.PostId,
-                                    Name = PostData?.Name,
-                                    Description = PostData?.Description,
-                                    UserId = PostData?.UserId,
-                                    CategoryId = PostData?.CategoryId,
-                                    CreatedAt = PostData?.CreatedAt,
-                                    UpdatedAt = PostData?.UpdatedAt
+                                    UserId = UserData?.UserId,
+                                    Email = UserData?.Email,
+                                    UserName = UserData?.UserName,
+                                    FullName = UserData?.FullName,
+                                    CountryId = UserData?.CountryId,
+                                    CreatedAt = UserData?.CreatedAt,
+                                    UpdatedAt = UserData?.UpdatedAt
                                 });
 
                             }
-
-                        }
-                        else
+                            
+                        } else
                         {
-                            _postObRepository.Delete(item?.ObjectId ?? 0);
+                            _userObRepository.Delete(item?.ObjectId ?? 0);
                         }
-                        await _fileLogService.writeFile("post-query-log", item?.LogId?.ToString() ?? "");
+                        await _fileLogService.writeFile("user-query-log", item?.LogId?.ToString() ?? "");
                     }
                     param.Offset += limit;
                     result = await _logCbRepository.GetAll(param);
