@@ -9,6 +9,8 @@
         public string? Name { get; set; }
         public string? CreatedDateFrom { get; set; }
         public string? CreatedDateTo { get; set; }
+        public bool? IsUpdate { get; set; } = false;
+        public DateTime? UpdatedDateFrom { get; set; }
 
     }
 }

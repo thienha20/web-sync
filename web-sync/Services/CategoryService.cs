@@ -14,8 +14,7 @@ namespace web_sync.Services
         public CategoryService(CategoryObRepository categoryObRepository, 
             CategoryCbRepository categoryCbRepository,
             FileLogService fileLogService,
-            LogCbRepository logCbRepository
-            )
+            LogCbRepository logCbRepository)
         {
             _categoryObRepository = categoryObRepository;
             _categoryCbRepository = categoryCbRepository;
@@ -23,7 +22,7 @@ namespace web_sync.Services
             _logCbRepository = logCbRepository;
         }
 
-        public async Task<bool> syncInsert()
+        public async Task<bool> SyncInsert()
         {
             try
             {
@@ -53,7 +52,14 @@ namespace web_sync.Services
                             CreatedAt = item?.CreatedAt,
                             UpdatedAt = item?.UpdatedAt
                         });
-                        await _fileLogService.writeFile("category-insert", item?.CategoryId.ToString() ?? "");
+                        if (item?.CategoryId != null)
+                        {
+                            string dataContent = item?.CategoryId.ToString() ?? "";
+                            if (dataContent != "")
+                            {
+                                await _fileLogService.writeFile("category-insert", dataContent);
+                            }
+                        }
                     }
                     param.Offset += limit;
                     result = await _categoryCbRepository.GetAll(param);
@@ -65,7 +71,7 @@ namespace web_sync.Services
             }
         }
 
-        public async Task<bool> syncInsertWithCondition(InsertDto insertParam)
+        public async Task<bool> SyncInsertWithCondition(InsertDto insertParam)
         {
             try
             {
@@ -97,13 +103,60 @@ namespace web_sync.Services
                 return false;
             }
         }
-        public async Task<bool> syncUpdateOrDelete()
+        public async Task<bool> SyncUpdate()
         {
             try
             {
                 int limit = 1000;
-                string content = await _fileLogService.readFile("category-query-log");
-                var param = new LogDto() {
+                var param = new CategoryDto() { Limit = limit, Offset = 0, IsUpdate=true, SortBy = "updated_at" };
+                string content = await _fileLogService.readFile("category-update");
+                if (content != null && content != "")
+                {
+                    param.UpdatedDateFrom = DateTime.Parse(content);
+                }
+                var result = await _categoryCbRepository.GetAll(param);
+
+                while (result != null && result.Any())
+                {
+                    foreach (var item in result)
+                    {
+                        _categoryObRepository.ReplaceInto(new CategoryObModel()
+                        {
+                            CategoryId = item?.CategoryId,
+                            Name = item?.Name,
+                            Description = item?.Description,
+                            Path = item?.Path,
+                            ParentId = item?.ParentId,
+                            CreatedAt = item?.CreatedAt,
+                            UpdatedAt = item?.UpdatedAt
+                        });
+                        if (item?.UpdatedAt != null)
+                        {
+                            string dataContent = item?.UpdatedAt.ToString() ?? "";
+                            if (dataContent != "") { 
+                                await _fileLogService.writeFile("category-update", dataContent);
+                            }
+                        }
+                    }
+                    param.Offset += limit;
+                    result = await _categoryCbRepository.GetAll(param);
+                }
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        public async Task<bool> SyncDelete()
+        {
+            try
+            {
+                int limit = 1000;
+                string content = await _fileLogService.readFile("category-delete");
+                var param = new LogDto()
+                {
                     ObjectName = "category",
                     ObjectTypes = new[] { "delete" },
                     Limit = limit,
@@ -122,29 +175,15 @@ namespace web_sync.Services
                 {
                     foreach (var item in result)
                     {
-                        if(item?.ObjectType == "update")
+                        _categoryObRepository.Delete(item?.ObjectId ?? 0);
+                        if (item?.LogId != null && item?.LogId.ToString() != "")
                         {
-                            var categoryData = await _categoryCbRepository.GetById(item.ObjectId ?? 0);
-                            if(categoryData != null)
+                            string dataContent = item?.LogId.ToString() ?? "";
+                            if(dataContent != "")
                             {
-                                _categoryObRepository.ReplaceInto(new CategoryObModel()
-                                {
-                                    CategoryId = categoryData?.CategoryId,
-                                    Name = categoryData?.Name,
-                                    Description = categoryData?.Description,
-                                    Path = categoryData?.Path,
-                                    ParentId = categoryData?.ParentId,
-                                    CreatedAt = categoryData?.CreatedAt,
-                                    UpdatedAt = categoryData?.UpdatedAt
-                                });
-
+                                await _fileLogService.writeFile("category-delete", dataContent);
                             }
-                            
-                        } else
-                        {
-                            _categoryObRepository.Delete(item?.ObjectId ?? 0);
                         }
-                        await _fileLogService.writeFile("category-query-log", item?.LogId?.ToString() ?? "");
                     }
                     param.Offset += limit;
                     result = await _logCbRepository.GetAll(param);
@@ -156,16 +195,11 @@ namespace web_sync.Services
                 return false;
             }
         }
-
-        public async Task<bool> syncAll()
+        public async Task SyncAll()
         {
-            bool bol = await syncInsert();
-            if (!bol)
-            {
-                return false;
-            }
-            bol = await syncUpdateOrDelete();
-            return bol;
+            await SyncInsert();
+            await SyncUpdate();
+            await SyncDelete();
         }
     }
 }

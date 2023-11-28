@@ -47,6 +47,8 @@ builder.Services.AddScoped<FileLogService>();
 builder.Services.AddScoped<PostService>();
 builder.Services.AddScoped<CountryService>();
 builder.Services.AddScoped<RegionService>();
+builder.Services.AddScoped<CategoryService>();
+builder.Services.AddScoped<UserService>();
 
 var app = builder.Build();
 

@@ -63,6 +63,16 @@ namespace web_sync.Repositories.cb
                 where += " AND created_at >= @CreatedDateFrom";
             }
 
+            if (param.UpdatedDateFrom != null)
+            {
+                where += " AND updated_at > @UpdatedDateFrom";
+            }
+
+            if (param.IsUpdate == true)
+            {
+                where += " AND created_at != updated_at";
+            }
+
             if (param.Offset != null)
             {
                 limit += " OFFSET " + param.Offset.ToString();
@@ -75,8 +85,8 @@ namespace web_sync.Repositories.cb
 
             if (param.SortBy != null)
             {
-                string sortOrder = param.SortOrder != "asc" ? " desc": " asc" ;
-                string[] sortBy = { "category_id", "name", "created_at" };
+                string sortOrder = param.SortOrder != "desc" ? " asc": " desc";
+                string[] sortBy = { "category_id", "name", "created_at", "updated_at" };
                 sort += " ORDER BY " + (sortBy.Contains(param.SortBy) ? param.SortBy: sortBy[0]) + sortOrder;
             }
 

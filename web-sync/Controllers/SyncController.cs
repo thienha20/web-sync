@@ -10,24 +10,27 @@ namespace web_sync.Controllers
         private readonly PostService _postService;
         private readonly CountryService _countryService;
         private readonly RegionService _regionService;
+        private readonly CategoryService _categoryService;
         public SyncController(PostService postService, 
             CountryService countryService,
-            RegionService regionService)
+            RegionService regionService,
+            CategoryService categoryService)
         {
             _postService = postService;
             _countryService = countryService;
             _regionService = regionService;
+            _categoryService = categoryService;
         }
 
         [HttpGet("all")]
         public async Task<IActionResult> Index()
         {
-            var data = await _countryService.syncInsert();
+           await _categoryService.SyncAll();
             //var dataRegion = await _regionService.syncUpdateOrDelete();
-            return Ok(data);
+            return Ok(new { message = "ok" });
         }
 
-        [HttpGet("post")]
+        [HttpPost("post")]
         public IActionResult post()
         {
             return View();

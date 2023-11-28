@@ -14,8 +14,7 @@ namespace web_sync.Services
         public RegionService(RegionObRepository RegionObRepository, 
             RegionCbRepository RegionCbRepository,
             FileLogService fileLogService,
-            LogCbRepository logCbRepository
-            )
+            LogCbRepository logCbRepository)
         {
             _regionObRepository = RegionObRepository;
             _regionCbRepository = RegionCbRepository;
@@ -23,7 +22,7 @@ namespace web_sync.Services
             _logCbRepository = logCbRepository;
         }
 
-        public async Task<bool> syncInsert()
+        public async Task<bool> SyncInsert()
         {
             try
             {
@@ -45,10 +44,17 @@ namespace web_sync.Services
                     {
                         _regionObRepository.ReplaceInto(new RegionObModel()
                         {
-                            RegionId = item.RegionId,
-                            RegionName = item.RegionName
+                            RegionId = item?.RegionId,
+                            RegionName = item?.RegionName
                         });
-                        await _fileLogService.writeFile("region-insert", item.RegionId.ToString() ?? "");
+                        if (item?.RegionId != null)
+                        {
+                            string dataContent = item?.RegionId.ToString() ?? "";
+                            if (dataContent != "")
+                            {
+                                await _fileLogService.writeFile("region-insert", dataContent);
+                            }
+                        }
                     }
                     param.Offset = param.Offset + limit;
                     result = await _regionCbRepository.GetAll(param);
@@ -87,15 +93,15 @@ namespace web_sync.Services
                 return false;
             }
         }
-        public async Task<bool> syncUpdateOrDelete()
+        public async Task<bool> SyncUpdate()
         {
             try
             {
                 int limit = 1000;
-                string content = await _fileLogService.readFile("region-query-log");
+                string content = await _fileLogService.readFile("region-update");
                 var param = new LogDto() {
                     ObjectName = "region",
-                    ObjectTypes = new[] { "update", "delete" },
+                    ObjectTypes = new[] { "update" },
                     Limit = limit,
                     Offset = 0
                 };
@@ -112,24 +118,24 @@ namespace web_sync.Services
                 {
                     foreach (var item in result)
                     {
-                        if(item?.ObjectType == "update")
+                        var RegionData = await _regionCbRepository.GetById(item?.ObjectId ?? 0);
+                        if (RegionData != null)
                         {
-                            var RegionData = await _regionCbRepository.GetById(item?.ObjectId ?? 0);
-                            if(RegionData != null)
+                            _regionObRepository.ReplaceInto(new RegionObModel()
                             {
-                                _regionObRepository.ReplaceInto(new RegionObModel()
+                                RegionId = RegionData.RegionId,
+                                RegionName = RegionData.RegionName
+                            });
+                            if (item?.LogId != null)
+                            {
+                                string dataContent = item?.LogId.ToString() ?? "";
+                                if (dataContent != "")
                                 {
-                                    RegionId = RegionData.RegionId,
-                                    RegionName = RegionData.RegionName
-                                });
-
+                                    await _fileLogService.writeFile("region-update", dataContent);
+                                }
                             }
-                            
-                        } else
-                        {
-                            _regionObRepository.Delete(item?.ObjectId ?? 0);
                         }
-                        await _fileLogService.writeFile("region-query-log", item?.LogId?.ToString() ?? "");
+                        
                     }
                     param.Offset += limit;
                     result = await _logCbRepository.GetAll(param);
@@ -142,15 +148,58 @@ namespace web_sync.Services
             }
         }
 
-        public async Task<bool> SyncAll()
+        public async Task<bool> SyncDelete()
         {
-            bool bol = await syncInsert();
-            if (!bol)
+            try
+            {
+                int limit = 1000;
+                string content = await _fileLogService.readFile("region-delete");
+                var param = new LogDto()
+                {
+                    ObjectName = "region",
+                    ObjectTypes = new[] { "delete" },
+                    Limit = limit,
+                    Offset = 0
+                };
+                if (content != null && content != "")
+                {
+                    bool isValidInt = int.TryParse(content, out int fromLogId);
+                    if (isValidInt)
+                    {
+                        param.FromLogId = fromLogId;
+                    }
+                }
+                var result = await _logCbRepository.GetAll(param);
+                while (result != null && result.Any())
+                {
+                    foreach (var item in result)
+                    {
+                        _regionObRepository.Delete(item?.ObjectId ?? 0);
+                        if (item?.LogId != null)
+                        {
+                            string dataContent = item?.LogId.ToString() ?? "";
+                            if (dataContent != "")
+                            {
+                                await _fileLogService.writeFile("region-delete", dataContent);
+                            }
+                        }
+                        
+                    }
+                    param.Offset += limit;
+                    result = await _logCbRepository.GetAll(param);
+                }
+                return true;
+            }
+            catch
             {
                 return false;
             }
-            bol = await syncUpdateOrDelete();
-            return bol;
+        }
+        public async Task SyncAll()
+        {
+            await SyncInsert();
+            await SyncUpdate();
+            await SyncDelete();
         }
     }
 }

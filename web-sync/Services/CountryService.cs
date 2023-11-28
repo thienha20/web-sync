@@ -26,7 +26,7 @@ namespace web_sync.Services
             _regionService = regionService;
         }
 
-        public async Task<bool> syncInsert()
+        public async Task<bool> SyncInsert()
         {
             try
             {
@@ -55,13 +55,20 @@ namespace web_sync.Services
                                 CountryCode = item?.CountryCode,
                                 RegionId = item?.RegionId,
                             });
-                            await _fileLogService.writeFile("country-insert", item?.CountryId?.ToString() ?? "");
+                            if (item?.CountryId != null)
+                            {
+                                string dataContent = item?.CountryId.ToString() ?? "";
+                                if (dataContent != "")
+                                {
+                                    await _fileLogService.writeFile("country-insert", dataContent);
+                                }
+                            }
                         } catch (Exception ex)
                         {
                             // không add dc khi thiếu khóa ngoại thì add khóa
-                            if (ex.Message.Contains("countries_region_id_fkey"))
+                            if (ex.Message.Contains("fk_region_id_fkey"))
                             {
-                                await _regionService.syncInsertWithCondition(new InsertDto() { id = new long[] { item.RegionId ?? 0 } });
+                                await _regionService.syncInsertWithCondition(new InsertDto() { id = new long[] { item?.RegionId ?? 0 } });
                                 _countryObRepository.ReplaceInto(new CountryObModel()
                                 {
                                     CountryId = item?.CountryId,
@@ -69,7 +76,14 @@ namespace web_sync.Services
                                     CountryCode = item?.CountryCode,
                                     RegionId = item?.RegionId,
                                 });
-                                await _fileLogService.writeFile("country-insert", item?.CountryId?.ToString() ?? "");
+                                if (item?.CountryId != null)
+                                {
+                                    string dataContent = item?.CountryId.ToString() ?? "";
+                                    if (dataContent != "")
+                                    {
+                                        await _fileLogService.writeFile("country-insert", dataContent);
+                                    }
+                                }
                                 continue;
                             }
                         }
@@ -108,7 +122,7 @@ namespace web_sync.Services
                         catch (Exception ex)
                         {
                             // không add dc khi thiếu khóa ngoại thì add khóa
-                            if (ex.Message.Contains("region_id_fk"))
+                            if (ex.Message.Contains("fk_region_id_fkey"))
                             {
                                 await _regionService.syncInsertWithCondition(new InsertDto() { id = new long[] { item?.RegionId ?? 0 } });
                                 _countryObRepository.ReplaceInto(new CountryObModel()
@@ -133,15 +147,15 @@ namespace web_sync.Services
                 return false;
             }
         }
-        public async Task<bool> syncUpdateOrDelete()
+        public async Task<bool> SyncUpdate()
         {
             try
             {
                 int limit = 1000;
-                string content = await _fileLogService.readFile("country-query-log");
+                string content = await _fileLogService.readFile("country-update");
                 var param = new LogDto() {
                     ObjectName = "country",
-                    ObjectTypes = new[] { "update", "delete" },
+                    ObjectTypes = new[] { "update" },
                     Limit = limit,
                     Offset = 0
                 };
@@ -158,26 +172,25 @@ namespace web_sync.Services
                 {
                     foreach (var item in result)
                     {
-                        if(item?.ObjectType == "update")
+                        var countryData = await _countryCbRepository.GetById(item?.ObjectId ?? 0);
+                        if (countryData != null)
                         {
-                            var countryData = await _countryCbRepository.GetById(item?.ObjectId ?? 0);
-                            if(countryData != null)
+                            _countryObRepository.ReplaceInto(new CountryObModel()
                             {
-                                _countryObRepository.ReplaceInto(new CountryObModel()
+                                CountryId = countryData.CountryId,
+                                CountryName = countryData.CountryName,
+                                CountryCode = countryData.CountryCode,
+                                RegionId = countryData.RegionId,
+                            });
+                            if (item?.LogId != null)
+                            {
+                                string dataContent = item?.LogId.ToString() ?? "";
+                                if (dataContent != "")
                                 {
-                                    CountryId = countryData.CountryId,
-                                    CountryName = countryData.CountryName,
-                                    CountryCode = countryData.CountryCode,
-                                    RegionId = countryData.RegionId,
-                                });
-
+                                    await _fileLogService.writeFile("country-update", dataContent);
+                                }
                             }
-                            
-                        } else
-                        {
-                            _countryObRepository.Delete(item?.ObjectId ?? 0);
                         }
-                        await _fileLogService.writeFile("country-query-log", item?.LogId?.ToString() ?? "");
                     }
                     param.Offset += limit;
                     result = await _logCbRepository.GetAll(param);
@@ -189,15 +202,57 @@ namespace web_sync.Services
                 return false;
             }
         }
-        public async Task<bool> syncAll()
+        public async Task<bool> SyncDelete()
         {
-            bool bol = await syncInsert();
-            if (!bol)
+            try
+            {
+                int limit = 1000;
+                string content = await _fileLogService.readFile("country-delete");
+                var param = new LogDto()
+                {
+                    ObjectName = "country",
+                    ObjectTypes = new[] { "delete" },
+                    Limit = limit,
+                    Offset = 0
+                };
+                if (content != null && content != "")
+                {
+                    bool isValidInt = int.TryParse(content, out int fromLogId);
+                    if (isValidInt)
+                    {
+                        param.FromLogId = fromLogId;
+                    }
+                }
+                var result = await _logCbRepository.GetAll(param);
+                while (result != null && result.Any())
+                {
+                    foreach (var item in result)
+                    {
+                        _countryObRepository.Delete(item?.ObjectId ?? 0);
+                        if (item?.LogId != null)
+                        {
+                            string dataContent = item?.LogId.ToString() ?? "";
+                            if (dataContent != "")
+                            {
+                                await _fileLogService.writeFile("country-delete", dataContent);
+                            }
+                        }
+                    }
+                    param.Offset += limit;
+                    result = await _logCbRepository.GetAll(param);
+                }
+                return true;
+            }
+            catch
             {
                 return false;
             }
-            bol = await syncUpdateOrDelete();
-            return bol;
+        }
+        public async Task syncAll()
+        {
+            await SyncInsert();
+            await SyncUpdate();
+            await SyncDelete();
         }
     }
 }

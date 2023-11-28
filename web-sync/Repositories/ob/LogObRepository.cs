@@ -130,7 +130,7 @@ namespace web_sync.Repositories.ob
                 });
                 return data;
             }
-            catch (Exception ex)
+            catch
             {
                 return null;
             }
