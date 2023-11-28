@@ -8,12 +8,12 @@ namespace web_sync.Repositories.cb
     public interface ICountryCbRepository
     {
         Task<IEnumerable<CountryCbModel?>?> GetAll(CountryDto param);
-        Task<CountryCbModel?> GetById(long id);
+        Task<CountryCbModel?> GetById(int id);
         void Insert(CountryCbModel Country);
         void ReplaceInto(CountryCbModel Country);
         void BulkInsert(List<CountryCbModel> Country);
-        void Update(long id, CountryCbModel Country);
-        void Delete(long id);
+        void Update(int id, CountryCbModel Country);
+        void Delete(int id);
     }
 
     public class CountryCbRepository : ICountryCbRepository
@@ -115,7 +115,7 @@ namespace web_sync.Repositories.cb
             return data;
         }
 
-        public async Task<CountryCbModel?> GetById(long id)
+        public async Task<CountryCbModel?> GetById(int id)
         {
             if (id > 0)
             {
@@ -251,7 +251,7 @@ namespace web_sync.Repositories.cb
             _connection.Execute(query, Country);
         }
 
-        public void Update(long id, CountryCbModel Country)
+        public void Update(int id, CountryCbModel Country)
         {
             string query = "UPDATE " + table + " SET ";
             List<string> dataSet = new();
@@ -273,7 +273,7 @@ namespace web_sync.Repositories.cb
             _connection.Execute(query, Country);
         }
 
-        public void Delete(long id)
+        public void Delete(int id)
         {
             if (id > 0)
             {

@@ -8,12 +8,12 @@ namespace web_sync.Repositories.ob
     public interface IPostObRepository
     {
         Task<IEnumerable<PostObModel?>?> GetAll(PostDto param);
-        Task<PostObModel?> GetById(long id);
+        Task<PostObModel?> GetById(int id);
         void Insert(PostObModel post);
         void ReplaceInto(PostObModel post);
         void BulkInsert(List<PostObModel> post);
-        void Update(long id, PostObModel post);
-        void Delete(long id);
+        void Update(int id, PostObModel post);
+        void Delete(int id);
     }
 
     public class PostObRepository : IPostObRepository
@@ -32,6 +32,21 @@ namespace web_sync.Repositories.ob
             string where = " WHERE true ";
             string limit = "";
             string sort = "";
+
+            if (param.PostId != null)
+            {
+                where += " AND post_id = @PostId";
+            }
+
+            if (param.FromPostId != null)
+            {
+                where += " AND post_id > @FromPostId";
+            }
+
+            if (param.PostIds != null)
+            {
+                where += " AND post_id = ANY(@PostIds)";
+            }
 
             if (param.UserId != null)
             {
@@ -53,6 +68,16 @@ namespace web_sync.Repositories.ob
                 where += " AND created_at >= @CreatedDateFrom";
             }
 
+            if (param.UpdatedDateFrom != null)
+            {
+                where += " AND updated_at > @UpdatedDateFrom";
+            }
+
+            if (param.IsUpdate == true)
+            {
+                where += " AND created_at != updated_at";
+            }
+
             if (param.Offset != null)
             {
                 limit += " OFFSET " + param.Offset.ToString();
@@ -65,7 +90,7 @@ namespace web_sync.Repositories.ob
 
             if (param.SortBy != null)
             {
-                string sortOrder = param.SortOrder != "asc" ? " desc" : " asc";
+                string sortOrder = param.SortOrder != "desc" ? " asc" : " desc";
                 string[] sortBy = { "post_id", "name", "user_id", "created_at" };
                 sort += " ORDER BY " + (sortBy.Contains(param.SortBy) ? param.SortBy : sortBy[0]) + sortOrder;
             }
@@ -73,7 +98,7 @@ namespace web_sync.Repositories.ob
             if (param.Fields != null)
             {
                 string[] fieldAllow = { "post_id", "user_id", "category_id", "name", "description", "created_at" };
-                List<string> customField = new List<string>();
+                List<string> customField = new();
                 foreach (string field in param.Fields)
                 {
                     if (fieldAllow.Contains(field))
@@ -108,7 +133,7 @@ namespace web_sync.Repositories.ob
             return data;
         }
 
-        public async Task<PostObModel?> GetById(long id)
+        public async Task<PostObModel?> GetById(int id)
         {
             if (id > 0)
             {
@@ -135,8 +160,8 @@ namespace web_sync.Repositories.ob
 
         public void Insert(PostObModel post)
         {
-            List<string> column = new List<string>();
-            List<string> columnData = new List<string>();
+            List<string> column = new();
+            List<string> columnData = new();
             if (post.PostId != null)
             {
                 column.Add("post_id");
@@ -180,7 +205,7 @@ namespace web_sync.Repositories.ob
         {
             if (posts.Count > 0)
             {
-                List<string> column = new List<string>();
+                List<string> column = new();
                 if (posts[0].PostId != null)
                 {
                     column.Add("post_id");
@@ -253,9 +278,9 @@ namespace web_sync.Repositories.ob
         public void ReplaceInto(PostObModel Post)
         {
             string query = "INSERT INTO " + table + "(";
-            List<string> column = new List<string>();
-            List<string> dataSet = new List<string>();
-            List<string> dataUpdate = new List<string>();
+            List<string> column = new();
+            List<string> dataSet = new();
+            List<string> dataUpdate = new();
             if (Post.Name != null)
             {
                 column.Add("name");
@@ -302,10 +327,10 @@ namespace web_sync.Repositories.ob
             _connection.Execute(query, Post);
         }
 
-        public void Update(long id, PostObModel post)
+        public void Update(int id, PostObModel post)
         {
             string query = "UPDATE " + table + " SET ";
-            List<string> dataSet = new List<string>();
+            List<string> dataSet = new();
             post.PostId = id;
             if (post.Name != null)
             {
@@ -335,7 +360,7 @@ namespace web_sync.Repositories.ob
             _connection.Execute(query, post);
         }
 
-        public void Delete(long id)
+        public void Delete(int id)
         {
             if (id > 0)
             {

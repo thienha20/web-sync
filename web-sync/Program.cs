@@ -49,6 +49,7 @@ builder.Services.AddScoped<CountryService>();
 builder.Services.AddScoped<RegionService>();
 builder.Services.AddScoped<CategoryService>();
 builder.Services.AddScoped<UserService>();
+builder.Services.AddScoped<SyncService>();
 
 var app = builder.Build();
 

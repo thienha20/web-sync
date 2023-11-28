@@ -8,12 +8,12 @@ namespace web_sync.Repositories.cb
     public interface IPostCbRepository
     {
         Task<IEnumerable<PostCbModel?>?> GetAll(PostDto param);
-        Task<PostCbModel?> GetById(long id);
+        Task<PostCbModel?> GetById(int id);
         void Insert(PostCbModel post);
         void ReplaceInto(PostCbModel post);
         void BulkInsert(List<PostCbModel> post);
-        void Update(long id, PostCbModel post);
-        void Delete(long id);
+        void Update(int id, PostCbModel post);
+        void Delete(int id);
     }
 
     public class PostCbRepository : IPostCbRepository
@@ -133,7 +133,7 @@ namespace web_sync.Repositories.cb
             return data;
         }
 
-        public async Task<PostCbModel?> GetById(long id)
+        public async Task<PostCbModel?> GetById(int id)
         {
             if (id > 0)
             {
@@ -327,7 +327,7 @@ namespace web_sync.Repositories.cb
             _connection.Execute(query, Post);
         }
 
-        public void Update(long id, PostCbModel post)
+        public void Update(int id, PostCbModel post)
         {
             string query = "UPDATE " + table + " SET ";
             List<string> dataSet = new();
@@ -360,7 +360,7 @@ namespace web_sync.Repositories.cb
             _connection.Execute(query, post);
         }
 
-        public void Delete(long id)
+        public void Delete(int id)
         {
             if (id > 0)
             {

@@ -8,12 +8,12 @@ namespace web_sync.Repositories.ob
     public interface ICountryObRepository
     {
         Task<IEnumerable<CountryObModel?>?> GetAll(CountryDto param);
-        Task<CountryObModel?> GetById(long id);
+        Task<CountryObModel?> GetById(int id);
         void Insert(CountryObModel Country);
         void ReplaceInto(CountryObModel Country);
         void BulkInsert(List<CountryObModel> Country);
-        void Update(long id, CountryObModel Country);
-        void Delete(long id);
+        void Update(int id, CountryObModel Country);
+        void Delete(int id);
     }
 
     public class CountryObRepository : ICountryObRepository
@@ -84,7 +84,7 @@ namespace web_sync.Repositories.ob
             if (param.Fields != null)
             {
                 string[] fieldAllow = { "country_id", "region_id", "country_code", "country_name" };
-                List<string> customField = new List<string>();
+                List<string> customField = new();
                 foreach (string field in param.Fields)
                 {
                     if (fieldAllow.Contains(field))
@@ -115,7 +115,7 @@ namespace web_sync.Repositories.ob
             return data;
         }
 
-        public async Task<CountryObModel?> GetById(long id)
+        public async Task<CountryObModel?> GetById(int id)
         {
             if (id > 0)
             {
@@ -138,8 +138,8 @@ namespace web_sync.Repositories.ob
         }
         public void Insert(CountryObModel Country)
         {
-            List<string> column = new List<string>();
-            List<string> columnData = new List<string>();
+            List<string> column = new();
+            List<string> columnData = new();
             if (Country.CountryId != null)
             {
                 column.Add("coutry_id");
@@ -169,7 +169,7 @@ namespace web_sync.Repositories.ob
         {
             if (countries.Count > 0)
             {
-                List<string> column = new List<string>();
+                List<string> column = new();
                 if (countries[0].CountryId != null)
                 {
                     column.Add("country_id");
@@ -218,9 +218,9 @@ namespace web_sync.Repositories.ob
         public void ReplaceInto(CountryObModel Country)
         {
             string query = "INSERT INTO " + table + "(";
-            List<string> column = new List<string>();
-            List<string> dataSet = new List<string>();
-            List<string> dataUpdate = new List<string>();
+            List<string> column = new();
+            List<string> dataSet = new();
+            List<string> dataUpdate = new();
 
             if (Country.CountryCode != null)
             {
@@ -251,10 +251,10 @@ namespace web_sync.Repositories.ob
             _connection.Execute(query, Country);
         }
 
-        public void Update(long id, CountryObModel Country)
+        public void Update(int id, CountryObModel Country)
         {
             string query = "UPDATE " + table + " SET ";
-            List<string> dataSet = new List<string>();
+            List<string> dataSet = new();
             Country.CountryId = id;
 
             if (Country.CountryName != null)
@@ -273,7 +273,7 @@ namespace web_sync.Repositories.ob
             _connection.Execute(query, Country);
         }
 
-        public void Delete(long id)
+        public void Delete(int id)
         {
             if (id > 0)
             {

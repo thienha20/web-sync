@@ -26,18 +26,55 @@ namespace web_sync.Services
             _regionService = regionService; 
         }
 
-        public async Task<bool> BeginALl()
+        public async Task<bool> InsertAll()
         {
             try
             {
                 //chay insert cac khong phu thuoc truoc
-
-                //chay cac update va delete
-
+                await _regionService.SyncInsert();
+                await _countryService.SyncInsert();
+                await _categoryService.SyncInsert();
+                await _userService.SyncInsert();
+                await _postService.SyncInsert();
                 return true;
             } catch
             {
+                return false;
+            }
+        }
 
+        public async Task<bool> UpdateAll()
+        {
+            try
+            {
+                //chay insert cac khong phu thuoc truoc
+                await _regionService.SyncUpdate();
+                await _countryService.SyncUpdate();
+                await _categoryService.SyncUpdate();
+                await _userService.SyncUpdate();
+                await _postService.SyncUpdate();
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        public async Task<bool> DeleteAll()
+        {
+            try
+            {
+                //chay insert cac khong phu thuoc truoc
+                await _regionService.SyncDelete();
+                await _countryService.SyncDelete();
+                await _categoryService.SyncDelete();
+                await _userService.SyncDelete();
+                await _postService.SyncDelete();
+                return true;
+            }
+            catch
+            {
                 return false;
             }
         }

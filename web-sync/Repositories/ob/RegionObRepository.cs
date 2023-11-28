@@ -7,13 +7,13 @@ namespace web_sync.Repositories.ob
 {
     public interface IRegionObRepository
     {
-        Task<IEnumerable<RegionObModel?>> GetAll(RegionDto param);
-        Task<RegionObModel?> GetById(long id);
+        Task<IEnumerable<RegionObModel?>?> GetAll(RegionDto param);
+        Task<RegionObModel?> GetById(int id);
         void Insert(RegionObModel Region);
         void ReplaceInto(RegionObModel Region);
         void BulkInsert(List<RegionObModel> Region);
-        void Update(long id, RegionObModel Region);
-        void Delete(long id);
+        void Update(int id, RegionObModel Region);
+        void Delete(int id);
     }
 
     public class RegionObRepository : IRegionObRepository
@@ -26,7 +26,7 @@ namespace web_sync.Repositories.ob
             _connection = connection;
         }
 
-        public async Task<IEnumerable<RegionObModel?>> GetAll(RegionDto param)
+        public async Task<IEnumerable<RegionObModel?>?> GetAll(RegionDto param)
         {
             string fields = "*";
             string where = " WHERE true ";
@@ -69,7 +69,7 @@ namespace web_sync.Repositories.ob
             if (param.Fields != null)
             {
                 string[] fieldAllow = { "region_id", "region_name" };
-                List<string> customField = new List<string>();
+                List<string> customField = new();
                 foreach (string field in param.Fields)
                 {
                     if (fieldAllow.Contains(field))
@@ -99,7 +99,7 @@ namespace web_sync.Repositories.ob
             return data;
         }
 
-        public async Task<RegionObModel?> GetById(long id)
+        public async Task<RegionObModel?> GetById(int id)
         {
             if (id > 0)
             {
@@ -121,8 +121,8 @@ namespace web_sync.Repositories.ob
 
         public void Insert(RegionObModel Region)
         {
-            List<string> column = new List<string>();
-            List<string> columnData = new List<string>();
+            List<string> column = new();
+            List<string> columnData = new();
             if (Region.RegionId != null)
             {
                 column.Add("region_id");
@@ -142,7 +142,7 @@ namespace web_sync.Repositories.ob
         {
             if (Regions.Count > 0)
             {
-                List<string> column = new List<string>();
+                List<string> column = new();
                 if (Regions[0].RegionId != null)
                 {
                     column.Add("region_id");
@@ -174,9 +174,9 @@ namespace web_sync.Repositories.ob
         public void ReplaceInto(RegionObModel Region)
         {
             string query = "INSERT INTO " + table + "(";
-            List<string> column = new List<string>();
-            List<string> dataSet = new List<string>();
-            List<string> dataUpdate = new List<string>();
+            List<string> column = new();
+            List<string> dataSet = new();
+            List<string> dataUpdate = new();
             if (Region.RegionName != null)
             {
                 column.Add("region_name");
@@ -194,10 +194,10 @@ namespace web_sync.Repositories.ob
             _connection.Execute(query, Region);
         }
 
-        public void Update(long id, RegionObModel Region)
+        public void Update(int id, RegionObModel Region)
         {
             string query = "UPDATE " + table + " SET ";
-            List<string> dataSet = new List<string>();
+            List<string> dataSet = new();
             Region.RegionId = id;
 
             if (Region.RegionName != null)
@@ -209,7 +209,7 @@ namespace web_sync.Repositories.ob
             _connection.Execute(query, Region);
         }
 
-        public void Delete(long id)
+        public void Delete(int id)
         {
             if (id > 0)
             {

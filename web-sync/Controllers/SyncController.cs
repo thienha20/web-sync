@@ -4,63 +4,35 @@ using web_sync.Services;
 namespace web_sync.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/sync")]
     public class SyncController : Controller
     {
-        private readonly PostService _postService;
-        private readonly CountryService _countryService;
-        private readonly RegionService _regionService;
-        private readonly CategoryService _categoryService;
-        private readonly UserService _userService;
-        public SyncController(PostService postService, 
-            CountryService countryService,
-            RegionService regionService,
-            CategoryService categoryService, 
-            UserService userService)
+        private readonly SyncService _syncService;
+        public SyncController(SyncService syncService)
         {
-            _postService = postService;
-            _countryService = countryService;
-            _regionService = regionService;
-            _categoryService = categoryService;
-            _userService = userService;
+            _syncService = syncService;
         }
 
-        [HttpGet("all")]
+        [HttpGet("insert")]
         public async Task<IActionResult> Index()
         {
-           await _postService.SyncAll();
-            //var dataRegion = await _regionService.syncUpdateOrDelete();
+            await _syncService.InsertAll();
             return Ok(new { message = "ok" });
         }
 
-        [HttpPost("post")]
-        public IActionResult post()
+        [HttpPost("update")]
+        public async Task<IActionResult> post()
         {
-            return View();
+            await _syncService.UpdateAll();
+            return Ok(new { message = "ok" });
         }
 
-        [HttpGet("user")]
-        public IActionResult user()
+        [HttpGet("delete")]
+        public async Task<IActionResult> user()
         {
-            return View();
+            await _syncService.DeleteAll();
+            return Ok(new { message = "ok" });
         }
 
-        [HttpGet("country")]
-        public IActionResult country()
-        {
-            return View();
-        }
-
-        [HttpGet("region")]
-        public IActionResult region()
-        {
-            return View();
-        }
-
-        [HttpGet("category")]
-        public IActionResult category()
-        {
-            return View();
-        }
     }
 }

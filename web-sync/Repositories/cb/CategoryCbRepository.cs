@@ -8,12 +8,12 @@ namespace web_sync.Repositories.cb
     public interface ICategoryCbRepository
     {
         Task<IEnumerable<CategoryCbModel?>?> GetAll(CategoryDto param);
-        Task<CategoryCbModel?> GetById(long id);
+        Task<CategoryCbModel?> GetById(int id);
         void Insert(CategoryCbModel Category);
         void ReplaceInto(CategoryCbModel Category);
         void BulkInsert(List<CategoryCbModel> Category);
-        void Update(long id, CategoryCbModel Category);
-        void Delete(long id);
+        void Update(int id, CategoryCbModel Category);
+        void Delete(int id);
     }
 
     public class CategoryCbRepository : ICategoryCbRepository
@@ -128,7 +128,7 @@ namespace web_sync.Repositories.cb
             return data;
         }
 
-        public async Task<CategoryCbModel?> GetById(long id)
+        public async Task<CategoryCbModel?> GetById(int id)
         {
             if (id > 0)
             {
@@ -316,7 +316,7 @@ namespace web_sync.Repositories.cb
             _connection.Execute(query, Category);
         }
 
-        public void Update(long id, CategoryCbModel Category)
+        public void Update(int id, CategoryCbModel Category)
         {
             string query = "UPDATE " + table + " SET ";
             Category.CategoryId = id;
@@ -353,7 +353,7 @@ namespace web_sync.Repositories.cb
             _connection.Execute(query, Category);
         }
         
-        public void Delete(long id)
+        public void Delete(int id)
         {
             if(id > 0)
             {

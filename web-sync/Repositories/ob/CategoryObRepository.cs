@@ -8,12 +8,12 @@ namespace web_sync.Repositories.ob
     public interface ICategoryObRepository
     {
         Task<IEnumerable<CategoryObModel?>?> GetAll(CategoryDto param);
-        Task<CategoryObModel?> GetById(long id);
+        Task<CategoryObModel?> GetById(int id);
         void Insert(CategoryObModel Category);
         void ReplaceInto(CategoryObModel Category);
         void BulkInsert(List<CategoryObModel> Category);
-        void Update(long id, CategoryObModel Category);
-        void Delete(long id);
+        void Update(int id, CategoryObModel Category);
+        void Delete(int id);
     }
 
     public class CategoryObRepository : ICategoryObRepository
@@ -45,7 +45,7 @@ namespace web_sync.Repositories.ob
 
             if (param.CategoryIds != null)
             {
-                where += " AND category_id = ANY(@CategoryId)";
+                where += " AND category_id = ANY(@CategoryIds)";
             }
 
             if (param.ParentId != null)
@@ -63,6 +63,16 @@ namespace web_sync.Repositories.ob
                 where += " AND created_at >= @CreatedDateFrom";
             }
 
+            if (param.UpdatedDateFrom != null)
+            {
+                where += " AND updated_at > @UpdatedDateFrom";
+            }
+
+            if (param.IsUpdate == true)
+            {
+                where += " AND created_at != updated_at";
+            }
+
             if (param.Offset != null)
             {
                 limit += " OFFSET " + param.Offset.ToString();
@@ -75,15 +85,15 @@ namespace web_sync.Repositories.ob
 
             if (param.SortBy != null)
             {
-                string sortOrder = param.SortOrder != "asc" ? " desc" : " asc";
-                string[] sortBy = { "category_id", "name", "created_at" };
+                string sortOrder = param.SortOrder != "desc" ? " asc" : " desc";
+                string[] sortBy = { "category_id", "name", "created_at", "updated_at" };
                 sort += " ORDER BY " + (sortBy.Contains(param.SortBy) ? param.SortBy : sortBy[0]) + sortOrder;
             }
 
             if (param.Fields != null)
             {
                 string[] fieldAllow = { "parent_id", "category_id", "name", "description", "created_at", "path" };
-                List<string> customField = new List<string>();
+                List<string> customField = new();
                 foreach (string field in param.Fields)
                 {
                     if (fieldAllow.Contains(field))
@@ -118,7 +128,7 @@ namespace web_sync.Repositories.ob
             return data;
         }
 
-        public async Task<CategoryObModel?> GetById(long id)
+        public async Task<CategoryObModel?> GetById(int id)
         {
             if (id > 0)
             {
@@ -145,8 +155,8 @@ namespace web_sync.Repositories.ob
 
         public void Insert(CategoryObModel Category)
         {
-            List<string> column = new List<string>();
-            List<string> columnData = new List<string>();
+            List<string> column = new();
+            List<string> columnData = new();
             if (Category.Path != null)
             {
                 column.Add("path");
@@ -190,7 +200,7 @@ namespace web_sync.Repositories.ob
         {
             if (Categories.Count > 0)
             {
-                List<string> column = new List<string>();
+                List<string> column = new();
                 if (Categories[0].Name != null)
                 {
                     column.Add("name");
@@ -258,9 +268,9 @@ namespace web_sync.Repositories.ob
         public void ReplaceInto(CategoryObModel Category)
         {
             string query = "INSERT INTO " + table + "(";
-            List<string> column = new List<string>();
-            List<string> dataSet = new List<string>();
-            List<string> dataUpdate = new List<string>();
+            List<string> column = new();
+            List<string> dataSet = new();
+            List<string> dataUpdate = new();
             if (Category.Path != null)
             {
                 column.Add("path");
@@ -306,11 +316,11 @@ namespace web_sync.Repositories.ob
             _connection.Execute(query, Category);
         }
 
-        public void Update(long id, CategoryObModel Category)
+        public void Update(int id, CategoryObModel Category)
         {
             string query = "UPDATE " + table + " SET ";
             Category.CategoryId = id;
-            List<string> dataSet = new List<string>();
+            List<string> dataSet = new();
             if (Category.Path != null)
             {
                 dataSet.Add("path = @Path");
@@ -343,7 +353,7 @@ namespace web_sync.Repositories.ob
             _connection.Execute(query, Category);
         }
 
-        public void Delete(long id)
+        public void Delete(int id)
         {
             if (id > 0)
             {

@@ -8,12 +8,12 @@ namespace web_sync.Repositories.ob
     public interface IUserObRepository
     {
         Task<IEnumerable<UserObModel?>?> GetAll(UserDto param);
-        Task<UserObModel?> GetById(long id);
+        Task<UserObModel?> GetById(int id);
         void Insert(UserObModel User);
         void ReplaceInto(UserObModel User);
         void BulkInsert(List<UserObModel> User);
-        void Update(long id, UserObModel User);
-        void Delete(long id);
+        void Update(int id, UserObModel User);
+        void Delete(int id);
     }
 
     public class UserObRepository : IUserObRepository
@@ -37,6 +37,16 @@ namespace web_sync.Repositories.ob
                 where += " AND user_id = @UserId";
             }
 
+            if (param.FromUserId != null)
+            {
+                where += " AND user_id > @FromUserId";
+            }
+
+            if (param.UserIds != null)
+            {
+                where += " AND user_id = ANY(@UserIds)";
+            }
+
             if (param.Email != null)
             {
                 param.Email = "%" + param.Email + "%";
@@ -58,6 +68,16 @@ namespace web_sync.Repositories.ob
                 where += " AND created_at >= @CreatedDateFrom";
             }
 
+            if (param.UpdatedDateFrom != null)
+            {
+                where += " AND updated_at > @UpdatedDateFrom";
+            }
+
+            if (param.IsUpdate == true)
+            {
+                where += " AND created_at != updated_at";
+            }
+
             if (param.Offset != null)
             {
                 limit += " OFFSET " + param.Offset.ToString();
@@ -70,7 +90,7 @@ namespace web_sync.Repositories.ob
 
             if (param.SortBy != null)
             {
-                string sortOrder = param.SortOrder != "asc" ? " desc" : " asc";
+                string sortOrder = param.SortOrder != "desc" ? " asc" : " desc";
                 string[] sortBy = { "user_id", "created_at", "country_id", "email", "full_name", "username" };
                 sort += " ORDER BY " + (sortBy.Contains(param.SortBy) ? param.SortBy : sortBy[0]) + sortOrder;
             }
@@ -78,7 +98,7 @@ namespace web_sync.Repositories.ob
             if (param.Fields != null)
             {
                 string[] fieldAllow = { "user_id", "full_name", "email", "username", "country_id", "created_at" };
-                List<string> customField = new List<string>();
+                List<string> customField = new();
                 foreach (string field in param.Fields)
                 {
                     if (fieldAllow.Contains(field))
@@ -94,26 +114,33 @@ namespace web_sync.Repositories.ob
 
             string sql = "SELECT " + fields + " FROM " + table;
             sql += where + sort + limit;
-
-            var res = await _connection.QueryAsync<dynamic>(sql, param);
-            if (res == null)
+            try
+            {
+                var res = await _connection.QueryAsync<dynamic>(sql, param);
+                if (res == null)
+                {
+                    return null;
+                }
+                var data = res.Select(p => new UserObModel
+                {
+                    UserId = p.user_id ?? null,
+                    UserName = p.user_name ?? null,
+                    FullName = p.full_name ?? null,
+                    Email = p.email ?? null,
+                    CountryId = p.country_id ?? null,
+                    CreatedAt = p.created_at ?? null,
+                    UpdatedAt = p.updated_at ?? null,
+                });
+                return data;
+            }
+            catch (Exception ex)
             {
                 return null;
             }
-            var data = res.Select(p => new UserObModel
-            {
-                UserId = p.user_id ?? null,
-                UserName = p.user_name ?? null,
-                FullName = p.full_name ?? null,
-                Email = p.email ?? null,
-                CountryId = p.country_id ?? null,
-                CreatedAt = p.created_at ?? null,
-                UpdatedAt = p.updated_at ?? null,
-            });
-            return data;
+
         }
 
-        public async Task<UserObModel?> GetById(long id)
+        public async Task<UserObModel?> GetById(int id)
         {
             if (id > 0)
             {
@@ -140,8 +167,8 @@ namespace web_sync.Repositories.ob
 
         public void Insert(UserObModel User)
         {
-            List<string> column = new List<string>();
-            List<string> columnData = new List<string>();
+            List<string> column = new();
+            List<string> columnData = new();
             if (User.FullName != null)
             {
                 column.Add("full_name");
@@ -185,7 +212,7 @@ namespace web_sync.Repositories.ob
         {
             if (Users.Count > 0)
             {
-                List<string> column = new List<string>();
+                List<string> column = new();
                 if (Users[0].FullName != null)
                 {
                     column.Add("full_name");
@@ -260,9 +287,9 @@ namespace web_sync.Repositories.ob
         public void ReplaceInto(UserObModel User)
         {
             string query = "INSERT INTO " + table + "(";
-            List<string> column = new List<string>();
-            List<string> dataSet = new List<string>();
-            List<string> dataUpdate = new List<string>();
+            List<string> column = new();
+            List<string> dataSet = new();
+            List<string> dataUpdate = new();
             if (User.FullName != null)
             {
                 column.Add("full_name");
@@ -309,10 +336,10 @@ namespace web_sync.Repositories.ob
             _connection.Execute(query, User);
         }
 
-        public void Update(long id, UserObModel User)
+        public void Update(int id, UserObModel User)
         {
             string query = "UPDATE " + table + " SET ";
-            List<string> dataSet = new List<string>();
+            List<string> dataSet = new();
             User.UserId = id;
             if (User.FullName != null)
             {
@@ -343,7 +370,7 @@ namespace web_sync.Repositories.ob
             _connection.Execute(query, User);
         }
 
-        public void Delete(long id)
+        public void Delete(int id)
         {
             if (id > 0)
             {

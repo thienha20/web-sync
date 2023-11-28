@@ -8,12 +8,12 @@ namespace web_sync.Repositories.cb
     public interface IUserCbRepository
     {
         Task<IEnumerable<UserCbModel?>?> GetAll(UserDto param);
-        Task<UserCbModel?> GetById(long id);
+        Task<UserCbModel?> GetById(int id);
         void Insert(UserCbModel User);
         void ReplaceInto(UserCbModel User);
         void BulkInsert(List<UserCbModel> User);
-        void Update(long id, UserCbModel User);
-        void Delete(long id);
+        void Update(int id, UserCbModel User);
+        void Delete(int id);
     }
 
     public class UserCbRepository : IUserCbRepository
@@ -139,7 +139,7 @@ namespace web_sync.Repositories.cb
             
         }
 
-        public async Task<UserCbModel?> GetById(long id)
+        public async Task<UserCbModel?> GetById(int id)
         {
             if (id > 0)
             {
@@ -335,7 +335,7 @@ namespace web_sync.Repositories.cb
             _connection.Execute(query, User);
         }
 
-        public void Update(long id, UserCbModel User)
+        public void Update(int id, UserCbModel User)
         {
             string query = "UPDATE " + table + " SET ";
             List<string> dataSet = new();
@@ -369,7 +369,7 @@ namespace web_sync.Repositories.cb
             _connection.Execute(query, User);
         }
 
-        public void Delete(long id)
+        public void Delete(int id)
         {
             if(id > 0)
             {

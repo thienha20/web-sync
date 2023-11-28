@@ -8,12 +8,12 @@ namespace web_sync.Repositories.cb
     public interface IRegionCbRepository
     {
         Task<IEnumerable<RegionCbModel?>?> GetAll(RegionDto param);
-        Task<RegionCbModel?> GetById(long id);
+        Task<RegionCbModel?> GetById(int id);
         void Insert(RegionCbModel Region);
         void ReplaceInto(RegionCbModel Region);
         void BulkInsert(List<RegionCbModel> Region);
-        void Update(long id, RegionCbModel Region);
-        void Delete(long id);
+        void Update(int id, RegionCbModel Region);
+        void Delete(int id);
     }
 
     public class RegionCbRepository : IRegionCbRepository
@@ -99,7 +99,7 @@ namespace web_sync.Repositories.cb
             return data;
         }
 
-        public async Task<RegionCbModel?> GetById(long id)
+        public async Task<RegionCbModel?> GetById(int id)
         {
             if (id > 0)
             {
@@ -194,7 +194,7 @@ namespace web_sync.Repositories.cb
             _connection.Execute(query, Region);
         }
 
-        public void Update(long id, RegionCbModel Region)
+        public void Update(int id, RegionCbModel Region)
         {
             string query = "UPDATE " + table + " SET ";
             List<string> dataSet = new();
@@ -209,7 +209,7 @@ namespace web_sync.Repositories.cb
             _connection.Execute(query, Region);
         }
 
-        public void Delete(long id)
+        public void Delete(int id)
         {
             if (id > 0)
             {
