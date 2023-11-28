@@ -33,7 +33,22 @@ namespace web_sync.Repositories.cb
             string limit = "";
             string sort = "";
 
-            if(param.UserId != null)
+            if (param.PostId != null)
+            {
+                where += " AND post_id = @PostId";
+            }
+
+            if (param.FromPostId != null)
+            {
+                where += " AND post_id > @FromPostId";
+            }
+
+            if (param.PostIds != null)
+            {
+                where += " AND post_id = ANY(@PostIds)";
+            }
+
+            if (param.UserId != null)
             {
                 where += " AND user_id = @UserId";
             }
@@ -53,6 +68,16 @@ namespace web_sync.Repositories.cb
                 where += " AND created_at >= @CreatedDateFrom";
             }
 
+            if (param.UpdatedDateFrom != null)
+            {
+                where += " AND updated_at > @UpdatedDateFrom";
+            }
+
+            if (param.IsUpdate == true)
+            {
+                where += " AND created_at != updated_at";
+            }
+
             if (param.Offset != null)
             {
                 limit += " OFFSET " + param.Offset.ToString();
@@ -65,7 +90,7 @@ namespace web_sync.Repositories.cb
 
             if (param.SortBy != null)
             {
-                string sortOrder = param.SortOrder != "asc" ? " desc": " asc" ;
+                string sortOrder = param.SortOrder != "desc" ? " asc": " desc";
                 string[] sortBy = { "post_id", "name", "user_id", "created_at"  };
                 sort += " ORDER BY " + (sortBy.Contains(param.SortBy) ? param.SortBy: sortBy[0]) + sortOrder;
             }
@@ -73,7 +98,7 @@ namespace web_sync.Repositories.cb
             if (param.Fields != null)
             {
                 string[] fieldAllow = { "post_id", "user_id", "category_id", "name", "description", "created_at" };
-                List<string> customField = new List<string>();
+                List<string> customField = new();
                 foreach (string field in param.Fields)
                 {
                     if (fieldAllow.Contains(field))
@@ -135,8 +160,8 @@ namespace web_sync.Repositories.cb
 
         public void Insert(PostCbModel post)
         {
-            List<string> column = new List<string>();
-            List<string> columnData = new List<string>();
+            List<string> column = new();
+            List<string> columnData = new();
             if (post.PostId != null)
             {
                 column.Add("post_id");
@@ -180,7 +205,7 @@ namespace web_sync.Repositories.cb
         {
             if (posts.Count > 0)
             {
-                List<string> column = new List<string>();
+                List<string> column = new();
                 if (posts[0].PostId != null)
                 {
                     column.Add("post_id");
@@ -253,9 +278,9 @@ namespace web_sync.Repositories.cb
         public void ReplaceInto(PostCbModel Post)
         {
             string query = "INSERT INTO " + table + "(";
-            List<string> column = new List<string>();
-            List<string> dataSet = new List<string>();
-            List<string> dataUpdate = new List<string>();
+            List<string> column = new();
+            List<string> dataSet = new();
+            List<string> dataUpdate = new();
             if (Post.Name != null)
             {
                 column.Add("name");
@@ -305,7 +330,7 @@ namespace web_sync.Repositories.cb
         public void Update(long id, PostCbModel post)
         {
             string query = "UPDATE " + table + " SET ";
-            List<string> dataSet = new List<string>();
+            List<string> dataSet = new();
             post.PostId = id;
             if (post.Name != null)
             {

@@ -45,7 +45,7 @@ namespace web_sync.Repositories.cb
 
             if (param.CategoryIds != null)
             {
-                where += " AND category_id = ANY(@CategoryId)";
+                where += " AND category_id = ANY(@CategoryIds)";
             }
 
             if (param.ParentId != null)
@@ -93,7 +93,7 @@ namespace web_sync.Repositories.cb
             if (param.Fields != null)
             {
                 string[] fieldAllow = { "parent_id", "category_id", "name", "description", "created_at", "path" };
-                List<string> customField = new List<string>();
+                List<string> customField = new();
                 foreach (string field in param.Fields)
                 {
                     if (fieldAllow.Contains(field))
@@ -155,8 +155,8 @@ namespace web_sync.Repositories.cb
 
         public void Insert(CategoryCbModel Category)
         {
-            List<string> column = new List<string>();
-            List<string> columnData = new List<string>();
+            List<string> column = new();
+            List<string> columnData = new();
             if (Category.Path != null)
             {
                 column.Add("path");
@@ -200,7 +200,7 @@ namespace web_sync.Repositories.cb
         {
             if (Categories.Count > 0)
             {
-                List<string> column = new List<string>();
+                List<string> column = new();
                 if (Categories[0].Name != null)
                 {
                     column.Add("name");
@@ -268,9 +268,9 @@ namespace web_sync.Repositories.cb
         public void ReplaceInto(CategoryCbModel Category)
         {
             string query = "INSERT INTO " + table + "(";
-            List<string> column = new List<string>();
-            List<string> dataSet = new List<string>();
-            List<string> dataUpdate = new List<string>();
+            List<string> column = new();
+            List<string> dataSet = new();
+            List<string> dataUpdate = new();
             if (Category.Path != null)
             {
                 column.Add("path");
@@ -320,7 +320,7 @@ namespace web_sync.Repositories.cb
         {
             string query = "UPDATE " + table + " SET ";
             Category.CategoryId = id;
-            List<string> dataSet = new List<string>();
+            List<string> dataSet = new();
             if (Category.Path != null)
             {
                 dataSet.Add("path = @Path");

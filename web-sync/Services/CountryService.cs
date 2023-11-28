@@ -46,29 +46,13 @@ namespace web_sync.Services
                 {
                     foreach (var item in result)
                     {
-                        try
+                        bool error = false;
+                        int timeInsertRegion = 0;
+                        while (!error)
                         {
-                            _countryObRepository.ReplaceInto(new CountryObModel()
+                            try
                             {
-                                CountryId = item?.CountryId,
-                                CountryName = item?.CountryName,
-                                CountryCode = item?.CountryCode,
-                                RegionId = item?.RegionId,
-                            });
-                            if (item?.CountryId != null)
-                            {
-                                string dataContent = item?.CountryId.ToString() ?? "";
-                                if (dataContent != "")
-                                {
-                                    await _fileLogService.writeFile("country-insert", dataContent);
-                                }
-                            }
-                        } catch (Exception ex)
-                        {
-                            // không add dc khi thiếu khóa ngoại thì add khóa
-                            if (ex.Message.Contains("fk_region_id_fkey"))
-                            {
-                                await _regionService.syncInsertWithCondition(new InsertDto() { id = new long[] { item?.RegionId ?? 0 } });
+                                if (timeInsertRegion > 1) break; //trường hợp khóa không còn tồn tại trong db
                                 _countryObRepository.ReplaceInto(new CountryObModel()
                                 {
                                     CountryId = item?.CountryId,
@@ -84,6 +68,16 @@ namespace web_sync.Services
                                         await _fileLogService.writeFile("country-insert", dataContent);
                                     }
                                 }
+                                error = true;
+                            }
+                            catch (Exception ex)
+                            {
+                                long[] ids = { item?.RegionId ?? 0 };
+                                if (ex.Message.Contains("fk_region_id"))
+                                {
+                                    await _regionService.syncInsertWithCondition(new InsertDto() { id = ids });
+                                    timeInsertRegion++;
+                                }
                                 continue;
                             }
                         }
@@ -98,33 +92,27 @@ namespace web_sync.Services
                 return false;
             }
         }
-        public async Task<bool> syncInsertWithCondition(InsertDto insertParam)
+        public async Task<bool> SyncInsertWithCondition(InsertDto insertParam)
         {
             try
             {
                 int limit = 1000;
-                var param = new CountryDto() { Limit = limit, Offset = 0, CountryIds = insertParam.id ?? null };             
+                var param = new CountryDto() { 
+                    Limit = limit, Offset = 0, 
+                    CountryIds = insertParam.id?.Select(l => (int)l).ToArray() 
+                };             
                 var result = await _countryCbRepository.GetAll(param);
                 while (result != null && result.Any())
                 {
                     foreach (var item in result)
                     {
-                        try
+                        bool error = false;
+                        int timeInsertRegion = 0;
+                        while (!error)
                         {
-                            _countryObRepository.ReplaceInto(new CountryObModel()
+                            try
                             {
-                                CountryId = item?.CountryId,
-                                CountryName = item?.CountryName,
-                                CountryCode = item?.CountryCode,
-                                RegionId = item?.RegionId,
-                            });
-                        }
-                        catch (Exception ex)
-                        {
-                            // không add dc khi thiếu khóa ngoại thì add khóa
-                            if (ex.Message.Contains("fk_region_id_fkey"))
-                            {
-                                await _regionService.syncInsertWithCondition(new InsertDto() { id = new long[] { item?.RegionId ?? 0 } });
+                                if (timeInsertRegion > 1) break; //trường hợp khóa không còn tồn tại trong db
                                 _countryObRepository.ReplaceInto(new CountryObModel()
                                 {
                                     CountryId = item?.CountryId,
@@ -132,6 +120,16 @@ namespace web_sync.Services
                                     CountryCode = item?.CountryCode,
                                     RegionId = item?.RegionId,
                                 });
+                                error = true;
+                            }
+                            catch (Exception ex)
+                            {
+                                long[] ids = { item?.RegionId ?? 0 };
+                                if (ex.Message.Contains("fk_region_id"))
+                                {
+                                    await _regionService.syncInsertWithCondition(new InsertDto() { id = ids });
+                                    timeInsertRegion++;
+                                }
                                 continue;
                             }
                         }

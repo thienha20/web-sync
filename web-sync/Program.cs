@@ -4,7 +4,7 @@ using web_sync.Repositories.ob;
 using web_sync.Services;
 
 var builder = WebApplication.CreateBuilder(args);
-
+builder.Logging.AddConsole();
 // Add services to the container.
 
 builder.Services.AddControllers().AddNewtonsoftJson(options =>

@@ -76,7 +76,7 @@ namespace web_sync.Services
             try
             {
                 int limit = 1000;
-                var param = new CategoryDto() { Limit = limit, Offset = 0, CategoryIds = insertParam.id };
+                var param = new CategoryDto() { Limit = limit, Offset = 0, CategoryIds = insertParam.id?.Select(l => (int)l).ToArray() };
                 var result = await _categoryCbRepository.GetAll(param);
                 while (result != null && result.Any())
                 {

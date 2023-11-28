@@ -71,7 +71,7 @@ namespace web_sync.Services
             try
             {
                 int limit = 1000;
-                var param = new RegionDto() { Limit = limit, Offset = 0, RegionIds = insertParam.id };
+                var param = new RegionDto() { Limit = limit, Offset = 0, RegionIds = insertParam.id?.Select(l => (int)l).ToArray() };
                 var result = await _regionCbRepository.GetAll(param);
                 while (result != null && result.Any())
                 {

@@ -84,7 +84,7 @@ namespace web_sync.Repositories.cb
             if (param.Fields != null)
             {
                 string[] fieldAllow = { "country_id", "region_id", "country_code", "country_name"};
-                List<string> customField = new List<string>();
+                List<string> customField = new();
                 foreach (string field in param.Fields)
                 {
                     if (fieldAllow.Contains(field))
@@ -138,8 +138,8 @@ namespace web_sync.Repositories.cb
         }
         public void Insert(CountryCbModel Country)
         {
-            List<string> column = new List<string>();
-            List<string> columnData = new List<string>();
+            List<string> column = new();
+            List<string> columnData = new();
             if (Country.CountryId != null)
             {
                 column.Add("coutry_id");
@@ -169,7 +169,7 @@ namespace web_sync.Repositories.cb
         {
             if (countries.Count > 0)
             {
-                List<string> column = new List<string>();
+                List<string> column = new();
                 if (countries[0].CountryId != null)
                 {
                     column.Add("country_id");
@@ -218,9 +218,9 @@ namespace web_sync.Repositories.cb
         public void ReplaceInto(CountryCbModel Country)
         {
             string query = "INSERT INTO " + table + "(";
-            List<string> column = new List<string>();
-            List<string> dataSet = new List<string>();
-            List<string> dataUpdate = new List<string>();
+            List<string> column = new();
+            List<string> dataSet = new();
+            List<string> dataUpdate = new();
             
             if (Country.CountryCode != null)
             {
@@ -254,7 +254,7 @@ namespace web_sync.Repositories.cb
         public void Update(long id, CountryCbModel Country)
         {
             string query = "UPDATE " + table + " SET ";
-            List<string> dataSet = new List<string>();
+            List<string> dataSet = new();
             Country.CountryId = id;
 
             if (Country.CountryName != null)

@@ -11,19 +11,25 @@ namespace web_sync.Services
         private readonly PostCbRepository _postCbRepository;
         private readonly FileLogService _fileLogService;
         private readonly LogCbRepository _logCbRepository;
+        private readonly UserService _userService;
+        private readonly CategoryService _categoryService;
         public PostService(PostObRepository PostObRepository,
             PostCbRepository PostCbRepository,
             FileLogService fileLogService,
-            LogCbRepository logCbRepository
+            LogCbRepository logCbRepository,
+            UserService userService,
+            CategoryService categoryService
             )
         {
             _postObRepository = PostObRepository;
             _postCbRepository = PostCbRepository;
             _fileLogService = fileLogService;
             _logCbRepository = logCbRepository;
+            _userService = userService;
+            _categoryService = categoryService;
         }
 
-        public async Task<bool> syncInsert()
+        public async Task<bool> SyncInsert()
         {
             try
             {
@@ -43,17 +49,52 @@ namespace web_sync.Services
                 {
                     foreach (var item in result)
                     {
-                        _postObRepository.ReplaceInto(new PostObModel()
+                        bool error = false;
+                        int timeInsertUser = 0;
+                        int timeInsertCategory = 0;
+                        while (!error)
                         {
-                            PostId = item?.PostId,
-                            Name = item?.Name,
-                            Description = item?.Description,
-                            UserId = item?.UserId,
-                            CategoryId = item?.CategoryId,
-                            CreatedAt = item?.CreatedAt,
-                            UpdatedAt = item?.UpdatedAt
-                        });
-                        await _fileLogService.writeFile("post-insert", item?.PostId.ToString() ?? "");
+                            try
+                            {
+                                if (timeInsertUser > 1 || timeInsertCategory > 1) break; //trường hợp khóa không còn tồn tại trong db
+                                _postObRepository.ReplaceInto(new PostObModel()
+                                {
+                                    PostId = item?.PostId,
+                                    Name = item?.Name,
+                                    Description = item?.Description,
+                                    UserId = item?.UserId,
+                                    CategoryId = item?.CategoryId,
+                                    CreatedAt = item?.CreatedAt,
+                                    UpdatedAt = item?.UpdatedAt
+                                });
+                                error = true;
+                                if (item?.PostId != null)
+                                {
+                                    string dataContent = item?.PostId.ToString() ?? "";
+                                    if (dataContent != "")
+                                    {
+                                        await _fileLogService.writeFile("post-insert", dataContent);
+                                    }
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                if (ex.Message.Contains("fk_user_id"))
+                                {
+                                    long[] ids = { item?.UserId ?? 0 };
+                                    await _userService.SyncInsertWithCondition(new InsertDto() { id = ids });
+                                    timeInsertUser++;
+                                }
+                                if (ex.Message.Contains("fk_category_id"))
+                                {
+                                    long[] ids = { item?.CategoryId ?? 0 };
+                                    await _categoryService.SyncInsertWithCondition(new InsertDto() { id = ids });
+                                    timeInsertCategory++;
+                                }
+                                continue;
+                            }
+                        }
+                        
                     }
                     param.Offset += limit;
                     result = await _postCbRepository.GetAll(param);
@@ -66,27 +107,54 @@ namespace web_sync.Services
             }
         }
 
-        public async Task<bool> syncInsertWithCondition(InsertDto insertParam)
+        public async Task<bool> SyncInsertWithCondition(InsertDto insertParam)
         {
             try
             {
                 int limit = 1000;
-                var param = new PostDto() { Limit = limit, Offset = 0, PostIds = insertParam.id };
+                var param = new PostDto() { Limit = limit, Offset = 0, PostIds = insertParam.id?.Select(l => (int)l).ToArray() };
                 var result = await _postCbRepository.GetAll(param);
                 while (result != null && result.Any())
                 {
                     foreach (var item in result)
                     {
-                        _postObRepository.ReplaceInto(new PostObModel()
+                        bool error = false;
+                        int timeInsertUser = 0;
+                        int timeInsertCategory = 0;
+                        while (!error)
                         {
-                            PostId = item?.PostId,
-                            Name = item?.Name,
-                            Description = item?.Description,
-                            UserId = item?.UserId,
-                            CategoryId = item?.CategoryId,
-                            CreatedAt = item?.CreatedAt,
-                            UpdatedAt = item?.UpdatedAt
-                        });
+                            try
+                            {
+                                if (timeInsertUser > 1 || timeInsertCategory > 1) break; //trường hợp khóa không còn tồn tại trong db
+                                _postObRepository.ReplaceInto(new PostObModel()
+                                {
+                                    PostId = item?.PostId,
+                                    Name = item?.Name,
+                                    Description = item?.Description,
+                                    UserId = item?.UserId,
+                                    CategoryId = item?.CategoryId,
+                                    CreatedAt = item?.CreatedAt,
+                                    UpdatedAt = item?.UpdatedAt
+                                });
+                                error = true;
+                            }
+                            catch (Exception ex)
+                            {
+                                if (ex.Message.Contains("fk_user_id"))
+                                {
+                                    long[] ids = { item?.UserId ?? 0 };
+                                    await _userService.SyncInsertWithCondition(new InsertDto() { id = ids });
+                                    timeInsertUser++;
+                                }
+                                if (ex.Message.Contains("fk_category_id"))
+                                {
+                                    long[] ids = { item?.CategoryId ?? 0 };
+                                    await _categoryService.SyncInsertWithCondition(new InsertDto() { id = ids });
+                                    timeInsertCategory++;
+                                }
+                                continue;
+                            }
+                        }
                     }
                     param.Offset += limit;
                     result = await _postCbRepository.GetAll(param);
@@ -98,12 +166,62 @@ namespace web_sync.Services
                 return false;
             }
         }
-        public async Task<bool> syncUpdateOrDelete()
+        public async Task<bool> SyncUpdate()
         {
             try
             {
                 int limit = 1000;
-                string content = await _fileLogService.readFile("post-query-log");
+                var param = new PostDto() { Limit = limit, Offset = 0, IsUpdate = true, SortBy = "updated_at" };
+                string content = await _fileLogService.readFile("post-update");
+                if (content != null && content != "")
+                {
+                    param.UpdatedDateFrom = DateTime.Parse(content);
+                }
+                var result = await _postCbRepository.GetAll(param);
+                while (result != null && result.Any())
+                {
+                    foreach (var item in result)
+                    {
+                        if (item != null)
+                        {
+                            _postObRepository.ReplaceInto(new PostObModel()
+                            {
+                                PostId = item?.PostId,
+                                Name = item?.Name,
+                                Description = item?.Description,
+                                UserId = item?.UserId,
+                                CategoryId = item?.CategoryId,
+                                CreatedAt = item?.CreatedAt,
+                                UpdatedAt = item?.UpdatedAt
+                            });
+
+                        }
+                        if (item?.UpdatedAt != null)
+                        {
+                            string dataContent = item?.UpdatedAt.ToString() ?? "";
+                            if (dataContent != "")
+                            {
+                                await _fileLogService.writeFile("post-update", dataContent);
+                            }
+                        }
+                    }
+                    param.Offset += limit;
+                    result = await _postCbRepository.GetAll(param);
+                }
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        public async Task<bool> SyncDelete()
+        {
+            try
+            {
+                int limit = 1000;
+                string content = await _fileLogService.readFile("post-delete");
                 var param = new LogDto()
                 {
                     ObjectName = "post",
@@ -124,30 +242,15 @@ namespace web_sync.Services
                 {
                     foreach (var item in result)
                     {
-                        if (item?.ObjectType == "update")
+                        _postObRepository.Delete(item?.ObjectId ?? 0);
+                        if (item?.LogId != null && item?.LogId.ToString() != "")
                         {
-                            var PostData = await _postCbRepository.GetById(item.ObjectId ?? 0);
-                            if (PostData != null)
+                            string dataContent = item?.LogId.ToString() ?? "";
+                            if (dataContent != "")
                             {
-                                _postObRepository.ReplaceInto(new PostObModel()
-                                {
-                                    PostId = PostData?.PostId,
-                                    Name = PostData?.Name,
-                                    Description = PostData?.Description,
-                                    UserId = PostData?.UserId,
-                                    CategoryId = PostData?.CategoryId,
-                                    CreatedAt = PostData?.CreatedAt,
-                                    UpdatedAt = PostData?.UpdatedAt
-                                });
-
+                                await _fileLogService.writeFile("post-delete", dataContent);
                             }
-
                         }
-                        else
-                        {
-                            _postObRepository.Delete(item?.ObjectId ?? 0);
-                        }
-                        await _fileLogService.writeFile("post-query-log", item?.LogId?.ToString() ?? "");
                     }
                     param.Offset += limit;
                     result = await _logCbRepository.GetAll(param);
@@ -159,16 +262,11 @@ namespace web_sync.Services
                 return false;
             }
         }
-
-        public async Task<bool> syncAll()
+        public async Task SyncAll()
         {
-            bool bol = await syncInsert();
-            if (!bol)
-            {
-                return false;
-            }
-            bol = await syncUpdateOrDelete();
-            return bol;
+            await SyncInsert();
+            //await SyncUpdate();
+            //await SyncDelete();
         }
     }
 }

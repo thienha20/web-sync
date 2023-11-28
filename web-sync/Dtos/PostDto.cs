@@ -2,14 +2,16 @@
 {
     public class PostDto: BaseDto
     {
-        public long? PostId { get; set; }
-        public long? FromPostId { get; set; }
-        public long[]? PostIds { get; set; }
+        public int? PostId { get; set; }
+        public int? FromPostId { get; set; }
+        public int[]? PostIds { get; set; }
         public string? Name { get; set; }
         public string? CreatedDateFrom { get; set; }
         public string? CreatedDateTo { get; set; }
-        public long? UserId { get; set; }
-        public long? CategoryId { get; set; }
+        public int? UserId { get; set; }
+        public int? CategoryId { get; set; }
+        public bool? IsUpdate { get; set; } = false;
+        public DateTime? UpdatedDateFrom { get; set; }
 
     }
 }

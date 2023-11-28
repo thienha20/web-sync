@@ -2,10 +2,10 @@
 {
     public class CategoryDto: BaseDto
     {
-        public long? CategoryId { get; set; }
-        public long? FromCategoryId { get; set; }
-        public long[]? CategoryIds { get; set; }
-        public long? ParentId { get; set; }
+        public int? CategoryId { get; set; }
+        public int? FromCategoryId { get; set; }
+        public int[]? CategoryIds { get; set; }
+        public int? ParentId { get; set; }
         public string? Name { get; set; }
         public string? CreatedDateFrom { get; set; }
         public string? CreatedDateTo { get; set; }

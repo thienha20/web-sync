@@ -11,21 +11,24 @@ namespace web_sync.Controllers
         private readonly CountryService _countryService;
         private readonly RegionService _regionService;
         private readonly CategoryService _categoryService;
+        private readonly UserService _userService;
         public SyncController(PostService postService, 
             CountryService countryService,
             RegionService regionService,
-            CategoryService categoryService)
+            CategoryService categoryService, 
+            UserService userService)
         {
             _postService = postService;
             _countryService = countryService;
             _regionService = regionService;
             _categoryService = categoryService;
+            _userService = userService;
         }
 
         [HttpGet("all")]
         public async Task<IActionResult> Index()
         {
-           await _categoryService.SyncAll();
+           await _postService.SyncAll();
             //var dataRegion = await _regionService.syncUpdateOrDelete();
             return Ok(new { message = "ok" });
         }

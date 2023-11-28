@@ -11,19 +11,21 @@ namespace web_sync.Services
         private readonly UserCbRepository _userCbRepository;
         private readonly FileLogService _fileLogService;
         private readonly LogCbRepository _logCbRepository;
+        private readonly CountryService _countryService;
         public UserService(UserObRepository UserObRepository, 
             UserCbRepository UserCbRepository,
             FileLogService fileLogService,
-            LogCbRepository logCbRepository
-            )
+            LogCbRepository logCbRepository, 
+            CountryService countryService)
         {
             _userObRepository = UserObRepository;
             _userCbRepository = UserCbRepository;
             _fileLogService = fileLogService;
             _logCbRepository = logCbRepository;
+            _countryService = countryService;
         }
 
-        public async Task<bool> syncInsert()
+        public async Task<bool> SyncInsert()
         {
             try
             {
@@ -43,17 +45,43 @@ namespace web_sync.Services
                 {
                     foreach (var item in result)
                     {
-                        _userObRepository.ReplaceInto(new UserObModel()
+                        bool error = false;
+                        int timeInsertCountry = 0;
+                        while (!error)
                         {
-                            UserId = item?.UserId,
-                            Email = item?.Email,
-                            UserName = item?.UserName,
-                            FullName = item?.FullName,
-                            CountryId = item?.CountryId,
-                            CreatedAt = item?.CreatedAt,
-                            UpdatedAt = item?.UpdatedAt
-                        });
-                        await _fileLogService.writeFile("user-insert", item?.UserId.ToString() ?? "");
+                            try
+                            {
+                                if (timeInsertCountry > 1) break; //trường hợp khóa không còn tồn tại trong db
+                                _userObRepository.ReplaceInto(new UserObModel()
+                                {
+                                    UserId = item?.UserId,
+                                    Email = item?.Email,
+                                    UserName = item?.UserName,
+                                    FullName = item?.FullName,
+                                    CountryId = item?.CountryId,
+                                    CreatedAt = item?.CreatedAt,
+                                    UpdatedAt = item?.UpdatedAt
+                                });
+                                if (item?.UserId != null)
+                                {
+                                    string dataContent = item?.UserId.ToString() ?? "";
+                                    if (dataContent != "")
+                                    {
+                                        await _fileLogService.writeFile("user-insert", dataContent);
+                                    }
+                                }
+                                error = true;
+                            }
+                            catch (Exception ex)
+                            {
+                                if (ex.Message.Contains("fk_country_id"))
+                                {
+                                    long[] ids = { item?.CountryId ?? 0 };
+                                    await _countryService.SyncInsertWithCondition(new InsertDto() { id = ids });
+                                    timeInsertCountry++;
+                                }
+                            }
+                        }
                     }
                     param.Offset += limit;
                     result = await _userCbRepository.GetAll(param);
@@ -65,27 +93,51 @@ namespace web_sync.Services
             }
         }
 
-        public async Task<bool> syncInsertWithCondition(InsertDto insertParam)
+        public async Task<bool> SyncInsertWithCondition(InsertDto insertParam)
         {
             try
             {
                 int limit = 1000;
-                var param = new UserDto() { Limit = limit, Offset = 0, UserIds = insertParam.id };
+                var param = new UserDto() { 
+                    Limit = limit, 
+                    Offset = 0, 
+                    UserIds = insertParam.id?.Select(l => (int)l).ToArray() 
+                };
                 var result = await _userCbRepository.GetAll(param);
                 while (result != null && result.Any())
                 {
                     foreach (var item in result)
                     {
-                        _userObRepository.ReplaceInto(new UserObModel()
+                        bool error = false;
+                        int timeInsertCountry = 0;
+                        while (!error)
                         {
-                            UserId = item?.UserId,
-                            Email = item?.Email,
-                            UserName = item?.UserName,
-                            FullName = item?.FullName,
-                            CountryId = item?.CountryId,
-                            CreatedAt = item?.CreatedAt,
-                            UpdatedAt = item?.UpdatedAt
-                        });
+                            try
+                            {
+                                if (timeInsertCountry > 1) break; //trường hợp khóa không còn tồn tại trong db
+                                _userObRepository.ReplaceInto(new UserObModel()
+                                {
+                                    UserId = item?.UserId,
+                                    Email = item?.Email,
+                                    UserName = item?.UserName,
+                                    FullName = item?.FullName,
+                                    CountryId = item?.CountryId,
+                                    CreatedAt = item?.CreatedAt,
+                                    UpdatedAt = item?.UpdatedAt
+                                });
+                                error = true;
+                            }
+                            catch (Exception ex)
+                            {
+                                if (ex.Message.Contains("fk_country_id"))
+                                {
+                                    long[] ids = { item?.CountryId ?? 0 };
+                                    await _countryService.SyncInsertWithCondition(new InsertDto() { id = ids });
+                                    timeInsertCountry++;
+                                }
+                            }
+                        }
+                        
                     }
                     param.Offset += limit;
                     result = await _userCbRepository.GetAll(param);
@@ -97,13 +149,62 @@ namespace web_sync.Services
                 return false;
             }
         }
-        public async Task<bool> syncUpdateOrDelete()
+        public async Task<bool> SyncUpdate()
         {
             try
             {
                 int limit = 1000;
-                string content = await _fileLogService.readFile("user-query-log");
-                var param = new LogDto() {
+                var param = new UserDto() { Limit = limit, Offset = 0, IsUpdate = true, SortBy = "updated_at" };
+                string content = await _fileLogService.readFile("user-update");
+                if (content != null && content != "")
+                {
+                    param.UpdatedDateFrom = DateTime.Parse(content);
+                }
+                var result = await _userCbRepository.GetAll(param);
+                while (result != null && result.Any())
+                {
+                    foreach (var item in result)
+                    {
+                        if(item != null)
+                        {
+                            _userObRepository.ReplaceInto(new UserObModel()
+                            {
+                                UserId = item?.UserId,
+                                Email = item?.Email,
+                                UserName = item?.UserName,
+                                FullName = item?.FullName,
+                                CountryId = item?.CountryId,
+                                CreatedAt = item?.CreatedAt,
+                                UpdatedAt = item?.UpdatedAt
+                            });
+                            if (item?.UserId != null)
+                            {
+                                string dataContent = item?.UserId.ToString() ?? "";
+                                if (dataContent != "")
+                                {
+                                    await _fileLogService.writeFile("user-update", dataContent);
+                                }
+                            }
+                        }
+                    }
+                    param.Offset += limit;
+                    result = await _userCbRepository.GetAll(param);
+                }
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+        public async Task<bool> SyncDelete()
+        {
+            try
+            {
+                int limit = 1000;
+                string content = await _fileLogService.readFile("user-delete");
+                var param = new LogDto()
+                {
                     ObjectName = "user",
                     ObjectTypes = new[] { "delete" },
                     Limit = limit,
@@ -122,29 +223,15 @@ namespace web_sync.Services
                 {
                     foreach (var item in result)
                     {
-                        if(item?.ObjectType == "update")
+                        _userObRepository.Delete(item?.ObjectId ?? 0);
+                        if (item?.LogId != null && item?.LogId.ToString() != "")
                         {
-                            var UserData = await _userCbRepository.GetById(item.ObjectId ?? 0);
-                            if(UserData != null)
+                            string dataContent = item?.LogId.ToString() ?? "";
+                            if (dataContent != "")
                             {
-                                _userObRepository.ReplaceInto(new UserObModel()
-                                {
-                                    UserId = UserData?.UserId,
-                                    Email = UserData?.Email,
-                                    UserName = UserData?.UserName,
-                                    FullName = UserData?.FullName,
-                                    CountryId = UserData?.CountryId,
-                                    CreatedAt = UserData?.CreatedAt,
-                                    UpdatedAt = UserData?.UpdatedAt
-                                });
-
+                                await _fileLogService.writeFile("user-delete", dataContent);
                             }
-                            
-                        } else
-                        {
-                            _userObRepository.Delete(item?.ObjectId ?? 0);
                         }
-                        await _fileLogService.writeFile("user-query-log", item?.LogId?.ToString() ?? "");
                     }
                     param.Offset += limit;
                     result = await _logCbRepository.GetAll(param);
@@ -156,16 +243,11 @@ namespace web_sync.Services
                 return false;
             }
         }
-
-        public async Task<bool> syncAll()
+        public async Task SyncAll()
         {
-            bool bol = await syncInsert();
-            if (!bol)
-            {
-                return false;
-            }
-            bol = await syncUpdateOrDelete();
-            return bol;
+            await SyncInsert();
+            await SyncUpdate();
+            await SyncDelete();
         }
     }
 }

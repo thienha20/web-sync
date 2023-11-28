@@ -7,7 +7,7 @@ namespace web_sync.Repositories.cb
 {
     public interface IRegionCbRepository
     {
-        Task<IEnumerable<RegionCbModel?>> GetAll(RegionDto param);
+        Task<IEnumerable<RegionCbModel?>?> GetAll(RegionDto param);
         Task<RegionCbModel?> GetById(long id);
         void Insert(RegionCbModel Region);
         void ReplaceInto(RegionCbModel Region);
@@ -26,7 +26,7 @@ namespace web_sync.Repositories.cb
             _connection = connection;
         }
 
-        public async Task<IEnumerable<RegionCbModel?>> GetAll(RegionDto param)
+        public async Task<IEnumerable<RegionCbModel?>?> GetAll(RegionDto param)
         {
             string fields = "*";
             string where = " WHERE true ";
@@ -69,7 +69,7 @@ namespace web_sync.Repositories.cb
             if (param.Fields != null)
             {
                 string[] fieldAllow = { "region_id", "region_name" };
-                List<string> customField = new List<string>();
+                List<string> customField = new();
                 foreach (string field in param.Fields)
                 {
                     if (fieldAllow.Contains(field))
@@ -121,8 +121,8 @@ namespace web_sync.Repositories.cb
 
         public void Insert(RegionCbModel Region)
         {
-            List<string> column = new List<string>();
-            List<string> columnData = new List<string>();
+            List<string> column = new();
+            List<string> columnData = new();
             if (Region.RegionId != null)
             {
                 column.Add("region_id");
@@ -142,7 +142,7 @@ namespace web_sync.Repositories.cb
         {
             if (Regions.Count > 0)
             {
-                List<string> column = new List<string>();
+                List<string> column = new();
                 if (Regions[0].RegionId != null)
                 {
                     column.Add("region_id");
@@ -174,9 +174,9 @@ namespace web_sync.Repositories.cb
         public void ReplaceInto(RegionCbModel Region)
         {
             string query = "INSERT INTO " + table + "(";
-            List<string> column = new List<string>();
-            List<string> dataSet = new List<string>();
-            List<string> dataUpdate = new List<string>();
+            List<string> column = new();
+            List<string> dataSet = new();
+            List<string> dataUpdate = new();
             if (Region.RegionName != null)
             {
                 column.Add("region_name");
@@ -197,7 +197,7 @@ namespace web_sync.Repositories.cb
         public void Update(long id, RegionCbModel Region)
         {
             string query = "UPDATE " + table + " SET ";
-            List<string> dataSet = new List<string>();
+            List<string> dataSet = new();
             Region.RegionId = id;
 
             if (Region.RegionName != null)

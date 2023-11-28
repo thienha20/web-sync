@@ -2,9 +2,9 @@
 {
     public class RegionDto: BaseDto
     {
-        public long? RegionId { get; set; }
-        public long[]? RegionIds { get; set; }
-        public long? FromRegionId { get; set; }
+        public int? RegionId { get; set; }
+        public int[]? RegionIds { get; set; }
+        public int? FromRegionId { get; set; }
         public string? RegionName { get; set; }
 
     }

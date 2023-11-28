@@ -97,7 +97,7 @@ namespace web_sync.Repositories.cb
             if (param.Fields != null)
             {
                 string[] fieldAllow = { "log_id", "created_at", "object_type", "object_name", "object_id", "timestamps" };
-                List<string> customField = new List<string>();
+                List<string> customField = new();
                 foreach (string field in param.Fields)
                 {
                     if (fieldAllow.Contains(field))
@@ -162,8 +162,8 @@ namespace web_sync.Repositories.cb
 
         public void Insert(LogCbModel Log)
         {
-            List<string> column = new List<string>();
-            List<string> columnData = new List<string>();
+            List<string> column = new();
+            List<string> columnData = new();
             if (Log.LogId != null)
             {
                 column.Add("log_id");
@@ -197,7 +197,7 @@ namespace web_sync.Repositories.cb
         {
             if (Logs.Count > 0)
             {
-                List<string> column = new List<string>();
+                List<string> column = new();
                 if (Logs[0].LogId != null)
                 {
                     column.Add("log_id");
@@ -255,9 +255,9 @@ namespace web_sync.Repositories.cb
         public void ReplaceInto(LogCbModel Log)
         {
             string query = "INSERT INTO " + table + "(";
-            List<string> column = new List<string>();
-            List<string> dataSet = new List<string>();
-            List<string> dataUpdate = new List<string>();
+            List<string> column = new();
+            List<string> dataSet = new();
+            List<string> dataUpdate = new();
             if (Log.ObjectName != null)
             {
                 column.Add("object_name");
@@ -295,7 +295,7 @@ namespace web_sync.Repositories.cb
         public void Update(long id, LogCbModel Log)
         {
             string query = "UPDATE " + table + " SET ";
-            List<string> dataSet = new List<string>();
+            List<string> dataSet = new();
             Log.LogId = id;
             if (Log.ObjectName != null)
             {

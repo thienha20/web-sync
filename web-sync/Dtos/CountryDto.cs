@@ -2,12 +2,12 @@
 {
     public class CountryDto: BaseDto
     {
-        public long? CountryId { get; set; }
-        public long[]? CountryIds { get; set; }
-        public long? FromCountryId { get; set; }
+        public int? CountryId { get; set; }
+        public int[]? CountryIds { get; set; }
+        public int? FromCountryId { get; set; }
         public string? CountryCode { get; set; }
         public string? CountryName { get; set; }
-        public long? RegionId { get; set; }
+        public int? RegionId { get; set; }
 
     }
 }
