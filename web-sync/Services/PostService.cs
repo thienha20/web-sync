@@ -242,7 +242,8 @@ namespace web_sync.Services
                 {
                     foreach (var item in result)
                     {
-                        _postObRepository.Delete(item?.ObjectId ?? 0);
+                        int id = (int)item?.ObjectId;
+                        _postObRepository.Delete(id);
                         if (item?.LogId != null && item?.LogId.ToString() != "")
                         {
                             string dataContent = item?.LogId.ToString() ?? "";

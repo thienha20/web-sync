@@ -124,7 +124,7 @@ namespace web_sync.Repositories.cb
                 var data = res.Select(p => new UserCbModel
                 {
                     UserId = p.user_id ?? null,
-                    UserName = p.user_name ?? null,
+                    UserName = p.username ?? null,
                     FullName = p.full_name ?? null,
                     Email = p.email ?? null,
                     CountryId = p.country_id ?? null,
@@ -132,7 +132,7 @@ namespace web_sync.Repositories.cb
                     UpdatedAt = p.updated_at ?? null,
                 });
                 return data;
-            } catch (Exception ex)
+            } catch
             {
                 return null;
             }
@@ -152,7 +152,7 @@ namespace web_sync.Repositories.cb
                 var data = new UserCbModel()
                 {
                     UserId = res.user_id ?? null,
-                    UserName = res.user_name ?? null,
+                    UserName = res.username ?? null,
                     FullName = res.full_name ?? null,
                     Email = res.email ?? null,
                     CountryId = res.country_id ?? null,

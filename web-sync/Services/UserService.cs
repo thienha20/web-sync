@@ -223,13 +223,18 @@ namespace web_sync.Services
                 {
                     foreach (var item in result)
                     {
-                        _userObRepository.Delete(item?.ObjectId ?? 0);
-                        if (item?.LogId != null && item?.LogId.ToString() != "")
+                        if (item?.ObjectId != null)
                         {
-                            string dataContent = item?.LogId.ToString() ?? "";
-                            if (dataContent != "")
+                            int id = (int)item?.ObjectId;
+                            _userObRepository.Delete(id);
+
+                            if (item?.LogId != null && item?.LogId.ToString() != "")
                             {
-                                await _fileLogService.writeFile("user-delete", dataContent);
+                                string dataContent = item?.LogId.ToString() ?? "";
+                                if (dataContent != "")
+                                {
+                                    await _fileLogService.writeFile("user-delete", dataContent);
+                                }
                             }
                         }
                     }

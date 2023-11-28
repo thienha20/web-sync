@@ -32,10 +32,15 @@ namespace web_sync.Services
             {
                 //chay insert cac khong phu thuoc truoc
                 await _regionService.SyncInsert();
+                Console.WriteLine("Insert xong region!");
                 await _countryService.SyncInsert();
+                Console.WriteLine("Insert xong country!");
                 await _categoryService.SyncInsert();
+                Console.WriteLine("Insert xong category!");
                 await _userService.SyncInsert();
+                Console.WriteLine("Insert xong user!");
                 await _postService.SyncInsert();
+                Console.WriteLine("Insert xong post!");
                 return true;
             } catch
             {

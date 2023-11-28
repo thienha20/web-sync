@@ -118,7 +118,8 @@ namespace web_sync.Services
                 {
                     foreach (var item in result)
                     {
-                        var RegionData = await _regionCbRepository.GetById(item?.ObjectId ?? 0);
+                        int id = (int)item?.ObjectId;
+                        var RegionData = await _regionCbRepository.GetById(id);
                         if (RegionData != null)
                         {
                             _regionObRepository.ReplaceInto(new RegionObModel()
@@ -174,7 +175,8 @@ namespace web_sync.Services
                 {
                     foreach (var item in result)
                     {
-                        _regionObRepository.Delete(item?.ObjectId ?? 0);
+                        int id = (int)item?.ObjectId;
+                        _regionObRepository.Delete(id);
                         if (item?.LogId != null)
                         {
                             string dataContent = item?.LogId.ToString() ?? "";

@@ -1,6 +1,7 @@
 ﻿using Npgsql;
 using web_sync.Repositories.cb;
 using web_sync.Repositories.ob;
+using web_sync.Repositories.Ob;
 using web_sync.Services;
 
 var builder = WebApplication.CreateBuilder(args);

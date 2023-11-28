@@ -170,7 +170,8 @@ namespace web_sync.Services
                 {
                     foreach (var item in result)
                     {
-                        var countryData = await _countryCbRepository.GetById(item?.ObjectId ?? 0);
+                        int id = (int)item?.ObjectId;
+                        var countryData = await _countryCbRepository.GetById(id);
                         if (countryData != null)
                         {
                             _countryObRepository.ReplaceInto(new CountryObModel()
@@ -226,7 +227,8 @@ namespace web_sync.Services
                 {
                     foreach (var item in result)
                     {
-                        _countryObRepository.Delete(item?.ObjectId ?? 0);
+                        int id = (int)item?.ObjectId;
+                        _countryObRepository.Delete(id);
                         if (item?.LogId != null)
                         {
                             string dataContent = item?.LogId.ToString() ?? "";
