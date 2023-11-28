@@ -7,7 +7,7 @@ namespace web_sync.Services
         {
             try
             {
-                string path = "Storage/Logs/" + objectName + ".log";
+                string path = "Storage/sync-logs/" + objectName + ".log";
                 await File.WriteAllTextAsync(path, content, Encoding.UTF8);
                 return true;
             } catch { return false; }
@@ -17,7 +17,7 @@ namespace web_sync.Services
         {
             try
             {
-                string path = "Storage/Logs/" + objectName + ".log";
+                string path = "Storage/sync-logs/" + objectName + ".log";
                 if (!File.Exists(path))
                 {
                     return "";
@@ -32,7 +32,7 @@ namespace web_sync.Services
         {
             try
             {
-                string path = "Storage/Logs/" + objectName + ".log";
+                string path = "Storage/sync-logs/" + objectName + ".log";
                 if (!File.Exists(path))
                 {
                     return await this.writeFile(objectName, content);
@@ -47,7 +47,7 @@ namespace web_sync.Services
         {
             try
             {
-                string path = "Storage/Logs/" + objectName + ".log";
+                string path = "Storage/sync-logs/" + objectName + ".log";
                 if (!File.Exists(path))
                 {
                     return false;
